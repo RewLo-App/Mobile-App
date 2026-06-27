@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { getClubById } from "@/constants/clubs";
 import { useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -76,7 +77,8 @@ function SettingRow({
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, trustPayPoints, transactions } = useWallet();
+  const { user, logout, trustPayPoints, transactions, selectedClubId } = useWallet();
+  const selectedClub = getClubById(selectedClubId);
   const [biometrics, setBiometrics] = useState(true);
   const [notifications, setNotifications] = useState(true);
 
@@ -110,7 +112,7 @@ export default function ProfileScreen() {
     >
       {/* Header */}
       <LinearGradient
-        colors={["#041828", "#062040"]}
+        colors={[selectedClub.gradientStart, selectedClub.gradientEnd]}
         style={[styles.headerGradient, { paddingTop: topPad + 16 }]}
       >
         <View style={styles.avatarSection}>
@@ -121,9 +123,9 @@ export default function ProfileScreen() {
           </LinearGradient>
           <Text style={[styles.userName, { color: colors.foreground }]}>{user?.name}</Text>
           <Text style={[styles.userEmail, { color: colors.mutedForeground }]}>{user?.email}</Text>
-          <View style={[styles.memberBadge, { backgroundColor: `${colors.primary}22`, borderColor: colors.primary }]}>
-            <Ionicons name="football-outline" size={12} color={colors.primary} />
-            <Text style={[styles.memberText, { color: colors.primary }]}>{user?.club} Fan</Text>
+          <View style={[styles.memberBadge, { backgroundColor: "rgba(255,255,255,0.2)", borderColor: "rgba(255,255,255,0.4)" }]}>
+            <Ionicons name="football-outline" size={12} color="#fff" />
+            <Text style={[styles.memberText, { color: "#fff" }]}>{selectedClub.shortName} Fan</Text>
           </View>
         </View>
 
@@ -148,7 +150,12 @@ export default function ProfileScreen() {
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SettingRow icon="person-outline" label="Personal Info" value={user?.phone} />
           <SettingRow icon="wallet-outline" label="Bank Accounts" value="2 linked" />
-          <SettingRow icon="football-outline" label="Favourite Club" value={user?.club} />
+          <SettingRow
+            icon="football-outline"
+            label="My Club"
+            value={selectedClub.shortName}
+            onPress={() => router.push("/club-selector")}
+          />
           <SettingRow icon="qr-code-outline" label="My QR Code" />
         </View>
       </View>

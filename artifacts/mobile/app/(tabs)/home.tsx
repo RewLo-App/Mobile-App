@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { getClubById } from "@/constants/clubs";
 import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -74,7 +75,8 @@ function TransactionRow({ item }: { item: Transaction }) {
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, balance, trustPayPoints, transactions } = useWallet();
+  const { user, balance, trustPayPoints, transactions, selectedClubId } = useWallet();
+  const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [sendModal, setSendModal] = useState(false);
   const [sendAmount, setSendAmount] = useState("");
@@ -115,9 +117,12 @@ export default function HomeScreen() {
               </Text>
             </View>
             <View style={styles.headerActions}>
-              <Pressable style={[styles.clubBadge, { backgroundColor: colors.primary }]}>
+              <Pressable
+                onPress={() => router.push("/club-selector")}
+                style={[styles.clubBadge, { backgroundColor: selectedClub.badgeBackground }]}
+              >
                 <MaterialCommunityIcons name="soccer" size={16} color="#fff" />
-                <Text style={styles.clubBadgeText}>{user?.club?.split(" ").pop()}</Text>
+                <Text style={styles.clubBadgeText}>{selectedClub.abbreviation}</Text>
               </Pressable>
               <Pressable style={[styles.notifBtn, { backgroundColor: colors.card }]}>
                 <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
@@ -205,19 +210,21 @@ export default function HomeScreen() {
         {/* Club Loyalty Banner */}
         <View style={styles.section}>
           <LinearGradient
-            colors={["#1E3A8A", "#2563EB"]}
+            colors={[selectedClub.gradientStart, selectedClub.gradientEnd]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.loyaltyBanner}
           >
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.loyaltyTitle}>Club Loyalty Status</Text>
-              <Text style={styles.loyaltyClub}>{user?.club}</Text>
+              <Text style={styles.loyaltyClub}>{selectedClub.name}</Text>
               <Text style={styles.loyaltyPoints}>
                 Gold Member · {trustPayPoints.toLocaleString()} pts
               </Text>
             </View>
-            <MaterialCommunityIcons name="trophy-outline" size={40} color="rgba(255,255,255,0.3)" />
+            <View style={styles.loyaltyBadge}>
+              <Text style={styles.loyaltyAbbrv}>{selectedClub.abbreviation}</Text>
+            </View>
           </LinearGradient>
         </View>
       </ScrollView>
@@ -295,10 +302,12 @@ const styles = StyleSheet.create({
   txDesc: { fontSize: 14, fontFamily: "Inter_500Medium" },
   txMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
   txAmount: { fontSize: 14, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
-  loyaltyBanner: { borderRadius: 18, padding: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  loyaltyBanner: { borderRadius: 18, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 },
   loyaltyTitle: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 4 },
   loyaltyClub: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold", marginBottom: 4 },
   loyaltyPoints: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium" },
+  loyaltyBadge: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+  loyaltyAbbrv: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.5, textAlign: "center" as const },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 14 },
   modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#1A3A5C", alignSelf: "center", marginBottom: 8 },

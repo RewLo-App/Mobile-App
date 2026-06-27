@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
+import { DEFAULT_CLUB_ID, getClubById } from "@/constants/clubs";
+
 export interface Transaction {
   id: string;
   type: "send" | "receive" | "payment" | "reward" | "topup";
@@ -53,6 +55,8 @@ interface WalletContextType {
   transactions: Transaction[];
   cards: VirtualCard[];
   offers: Offer[];
+  selectedClubId: string;
+  setSelectedClub: (id: string) => void;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   sendMoney: (amount: number, recipient: string) => void;
@@ -237,12 +241,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [cards, setCards] = useState<VirtualCard[]>(MOCK_CARDS);
   const [offers, setOffers] = useState<Offer[]>(MOCK_OFFERS);
+  const [selectedClubId, setSelectedClubId] = useState(DEFAULT_CLUB_ID);
 
   useEffect(() => {
-    AsyncStorage.getItem("homefield_auth").then((val) => {
-      if (val === "true") {
+    Promise.all([
+      AsyncStorage.getItem("homefield_auth"),
+      AsyncStorage.getItem("homefield_club"),
+    ]).then(([auth, club]) => {
+      if (auth === "true") {
         setIsAuthenticated(true);
         setUser(MOCK_USER);
+      }
+      if (club) {
+        setSelectedClubId(club);
       }
     });
   }, []);
@@ -255,6 +266,19 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       return true;
     }
     return false;
+  }, []);
+
+  const setSelectedClub = useCallback(async (id: string) => {
+    setSelectedClubId(id);
+    await AsyncStorage.setItem("homefield_club", id);
+    const club = getClubById(id);
+    setCards((prev) =>
+      prev.map((c) =>
+        c.isDefault
+          ? { ...c, gradientStart: club.gradientStart, gradientEnd: club.gradientEnd, clubName: club.name }
+          : c
+      )
+    );
   }, []);
 
   const logout = useCallback(async () => {
@@ -316,6 +340,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         transactions,
         cards,
         offers,
+        selectedClubId,
+        setSelectedClub,
         login,
         logout,
         sendMoney,
