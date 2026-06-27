@@ -41,6 +41,14 @@ function RootLayoutNav() {
           animation: "slide_from_bottom",
         }}
       />
+      <Stack.Screen
+        name="matchday"
+        options={{
+          headerShown: false,
+          presentation: "fullScreenModal",
+          animation: "slide_from_bottom",
+        }}
+      />
     </Stack>
   );
 }

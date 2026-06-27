@@ -2,8 +2,9 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
   FlatList,
   Modal,
   Platform,
@@ -17,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getClubById } from "@/constants/clubs";
+import { getFixtureForClub, getTimeUntilMatch } from "@/constants/fixtures";
 import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -82,6 +84,30 @@ export default function HomeScreen() {
   const [sendAmount, setSendAmount] = useState("");
   const [sendRecipient, setSendRecipient] = useState("");
   const { sendMoney } = useWallet();
+
+  const fixture = getFixtureForClub(selectedClubId);
+  const [matchTime, setMatchTime] = useState(() =>
+    fixture ? getTimeUntilMatch(fixture.dateTime) : null
+  );
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!fixture) return;
+    const tick = setInterval(() => setMatchTime(getTimeUntilMatch(fixture.dateTime)), 1000);
+    return () => clearInterval(tick);
+  }, [fixture]);
+
+  useEffect(() => {
+    if (!matchTime?.isToday && !matchTime?.isLive) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.03, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [matchTime?.isToday, matchTime?.isLive]);
 
   const recent = transactions.slice(0, 4);
 
@@ -189,6 +215,62 @@ export default function HomeScreen() {
             ))}
           </View>
         </LinearGradient>
+
+        {/* Match Day Banner */}
+        {fixture && matchTime && !matchTime.isPast && (
+          <Animated.View style={[styles.section, { transform: [{ scale: pulseAnim }] }]}>
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/matchday"); }}
+            >
+              <LinearGradient
+                colors={[selectedClub.gradientStart, selectedClub.gradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.matchdayBanner}
+              >
+                <View style={styles.matchdayLeft}>
+                  {matchTime.isLive ? (
+                    <View style={styles.livePill}>
+                      <View style={styles.livePillDot} />
+                      <Text style={styles.livePillText}>LIVE NOW</Text>
+                    </View>
+                  ) : matchTime.isToday ? (
+                    <View style={styles.todayPill}>
+                      <Ionicons name="football-outline" size={12} color="#fff" />
+                      <Text style={styles.livePillText}>MATCH DAY</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.upcomingPill}>
+                      <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.8)" />
+                      <Text style={[styles.livePillText, { color: "rgba(255,255,255,0.85)" }]}>UPCOMING</Text>
+                    </View>
+                  )}
+                  <Text style={styles.matchdayFixture} numberOfLines={1}>
+                    {selectedClub.shortName} vs {fixture.opponent}
+                  </Text>
+                  <Text style={styles.matchdayVenue} numberOfLines={1}>{fixture.venue}</Text>
+                  {!matchTime.isLive && (
+                    <View style={styles.matchdayCountRow}>
+                      {matchTime.days > 0 && (
+                        <Text style={styles.matchdayCountText}>{matchTime.days}d </Text>
+                      )}
+                      <Text style={styles.matchdayCountText}>
+                        {String(matchTime.hours).padStart(2, "0")}h{" "}
+                        {String(matchTime.minutes).padStart(2, "0")}m{" "}
+                        {String(matchTime.seconds).padStart(2, "0")}s
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={styles.matchdayRight}>
+                  <View style={styles.matchdayIconCircle}>
+                    <Ionicons name="chevron-forward" size={18} color="#fff" />
+                  </View>
+                </View>
+              </LinearGradient>
+            </Pressable>
+          </Animated.View>
+        )}
 
         {/* Recent Transactions */}
         <View style={styles.section}>
@@ -302,6 +384,19 @@ const styles = StyleSheet.create({
   txDesc: { fontSize: 14, fontFamily: "Inter_500Medium" },
   txMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
   txAmount: { fontSize: 14, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
+  matchdayBanner: { borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center" },
+  matchdayLeft: { flex: 1, gap: 5 },
+  matchdayRight: { paddingLeft: 12 },
+  matchdayIconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  matchdayFixture: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
+  matchdayVenue: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "Inter_400Regular" },
+  matchdayCountRow: { flexDirection: "row" },
+  matchdayCountText: { color: "rgba(255,255,255,0.85)", fontSize: 13, fontFamily: "Inter_600SemiBold", letterSpacing: 0.5 },
+  livePill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "#EF4444", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
+  livePillDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#fff" },
+  livePillText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  todayPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.25)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
+  upcomingPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   loyaltyBanner: { borderRadius: 18, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 },
   loyaltyTitle: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 4 },
   loyaltyClub: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold", marginBottom: 4 },
