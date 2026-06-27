@@ -165,7 +165,7 @@ export default function HomeScreen() {
             {[
               { label: "Send", icon: "arrow-up" as keyof typeof Ionicons.glyphMap, action: () => setSendModal(true) },
               { label: "Receive", icon: "arrow-down" as keyof typeof Ionicons.glyphMap, action: () => {} },
-              { label: "Pay", icon: "scan" as keyof typeof Ionicons.glyphMap, action: () => {} },
+              { label: "Pay", icon: "scan" as keyof typeof Ionicons.glyphMap, action: () => router.push("/scan") },
               { label: "Top Up", icon: "add" as keyof typeof Ionicons.glyphMap, action: () => {} },
             ].map((a) => (
               <Pressable
