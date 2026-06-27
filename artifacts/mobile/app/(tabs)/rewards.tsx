@@ -23,6 +23,31 @@ const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Gaming: "game-controller-outline",
 };
 
+interface Milestone {
+  points: number;
+  tier: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
+  perk: string;
+}
+
+const MILESTONES: Milestone[] = [
+  { points: 0,     tier: "Bronze",   icon: "shield-outline",       color: "#CD7F32", perk: "Fan member status" },
+  { points: 1000,  tier: "Silver",   icon: "shield-half-outline",  color: "#A0AEC0", perk: "2% cashback on all purchases" },
+  { points: 2500,  tier: "Gold",     icon: "shield",               color: "#F59E0B", perk: "Priority stadium access" },
+  { points: 5000,  tier: "Platinum", icon: "star-outline",         color: "#E2E8F0", perk: "Club jersey 15% discount" },
+  { points: 10000, tier: "Diamond",  icon: "diamond-outline",      color: "#67E8F9", perk: "VIP matchday experience" },
+];
+
+function getCurrentTierIndex(pts: number): number {
+  let idx = 0;
+  for (let i = 0; i < MILESTONES.length; i++) {
+    if (pts >= MILESTONES[i].points) idx = i;
+    else break;
+  }
+  return idx;
+}
+
 interface OfferCardProps {
   item: Offer;
   onRedeem: (id: string) => void;
@@ -92,8 +117,17 @@ export default function RewardsScreen() {
 
   const categories = ["All", "Sports", "Stadium", "Media", "Gaming"];
   const filtered = filter === "All" ? offers : offers.filter((o) => o.category === filter);
-
   const rewardTxs = transactions.filter((t) => t.type === "reward").slice(0, 3);
+
+  const currentTierIdx = getCurrentTierIndex(trustPayPoints);
+  const currentMilestone = MILESTONES[currentTierIdx];
+  const nextMilestone = MILESTONES[currentTierIdx + 1] ?? null;
+  const prevPoints = currentMilestone.points;
+  const nextPoints = nextMilestone?.points ?? currentMilestone.points;
+  const progressPct = nextMilestone
+    ? Math.min(1, (trustPayPoints - prevPoints) / (nextPoints - prevPoints))
+    : 1;
+  const ptsToNext = nextMilestone ? nextMilestone.points - trustPayPoints : 0;
 
   const handleRedeem = (id: string) => {
     const offer = offers.find((o) => o.id === id);
@@ -134,7 +168,7 @@ export default function RewardsScreen() {
               <View>
                 <Text style={styles.pointsHeroLabel}>TrustPay Points</Text>
                 <Text style={styles.pointsHeroAmount}>{trustPayPoints.toLocaleString()}</Text>
-                <Text style={styles.pointsHeroSub}>Gold Member · Earned this season</Text>
+                <Text style={styles.pointsHeroSub}>{currentMilestone.tier} Member · Earned this season</Text>
               </View>
               <MaterialCommunityIcons name="star-circle" size={64} color="rgba(255,255,255,0.25)" />
             </LinearGradient>
@@ -154,6 +188,109 @@ export default function RewardsScreen() {
               ))}
             </View>
           </LinearGradient>
+
+          {/* TrustPay Milestones */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Loyalty Milestones</Text>
+            <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
+              Earn points to unlock exclusive perks
+            </Text>
+          </View>
+
+          {/* Progress to next tier */}
+          {nextMilestone && (
+            <View style={[styles.progressCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.progressTop}>
+                <View style={styles.progressTierRow}>
+                  <View style={[styles.tierDot, { backgroundColor: currentMilestone.color }]} />
+                  <Text style={[styles.progressTierLabel, { color: colors.foreground }]}>
+                    {currentMilestone.tier}
+                  </Text>
+                </View>
+                <Text style={[styles.progressPts, { color: colors.mutedForeground }]}>
+                  {ptsToNext.toLocaleString()} pts to {nextMilestone.tier}
+                </Text>
+                <View style={styles.progressTierRow}>
+                  <View style={[styles.tierDot, { backgroundColor: nextMilestone.color }]} />
+                  <Text style={[styles.progressTierLabel, { color: colors.foreground }]}>
+                    {nextMilestone.tier}
+                  </Text>
+                </View>
+              </View>
+              {/* Bar */}
+              <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
+                <LinearGradient
+                  colors={[currentMilestone.color, nextMilestone.color]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.progressBarFill, { width: `${Math.round(progressPct * 100)}%` }]}
+                />
+              </View>
+              <View style={styles.progressPtRow}>
+                <Text style={[styles.progressPtLabel, { color: colors.mutedForeground }]}>
+                  {trustPayPoints.toLocaleString()} pts
+                </Text>
+                <Text style={[styles.progressPtLabel, { color: colors.mutedForeground }]}>
+                  {nextMilestone.points.toLocaleString()} pts
+                </Text>
+              </View>
+              <View style={[styles.perkRow, { backgroundColor: `${nextMilestone.color}18`, borderColor: `${nextMilestone.color}40` }]}>
+                <Ionicons name="gift-outline" size={14} color={nextMilestone.color} />
+                <Text style={[styles.perkText, { color: colors.foreground }]}>
+                  Unlock at {nextMilestone.tier}:{" "}
+                  <Text style={{ color: nextMilestone.color, fontFamily: "Inter_600SemiBold" }}>
+                    {nextMilestone.perk}
+                  </Text>
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* All milestones ladder */}
+          <View style={[styles.milestoneLadder, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {MILESTONES.map((m, i) => {
+              const isReached = trustPayPoints >= m.points;
+              const isCurrent = i === currentTierIdx;
+              const isLast = i === MILESTONES.length - 1;
+              return (
+                <View key={m.tier} style={[styles.milestoneRow, !isLast && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth }]}>
+                  {/* Timeline */}
+                  <View style={styles.milestoneTimeline}>
+                    <View style={[
+                      styles.milestoneDot,
+                      isReached ? { backgroundColor: m.color, borderColor: m.color } : { backgroundColor: "transparent", borderColor: colors.border },
+                      isCurrent && styles.milestoneCurrentDot,
+                    ]}>
+                      {isReached && <Ionicons name="checkmark" size={10} color={isCurrent ? "#000" : "#fff"} />}
+                    </View>
+                    {!isLast && (
+                      <View style={[styles.milestoneLine, { backgroundColor: isReached ? m.color : colors.border }]} />
+                    )}
+                  </View>
+                  {/* Content */}
+                  <View style={styles.milestoneContent}>
+                    <View style={styles.milestoneTitleRow}>
+                      <View style={[styles.milestoneTierBadge, { backgroundColor: `${m.color}22`, borderColor: `${m.color}44` }]}>
+                        <Ionicons name={m.icon} size={12} color={m.color} />
+                        <Text style={[styles.milestoneTierText, { color: m.color }]}>{m.tier}</Text>
+                      </View>
+                      <Text style={[styles.milestonePts, { color: isReached ? m.color : colors.mutedForeground }]}>
+                        {m.points.toLocaleString()} pts
+                      </Text>
+                    </View>
+                    <Text style={[styles.milestonePerk, { color: isReached ? colors.foreground : colors.mutedForeground }]}>
+                      {m.perk}
+                    </Text>
+                    {isCurrent && (
+                      <View style={[styles.currentBadge, { backgroundColor: `${m.color}22` }]}>
+                        <Text style={[styles.currentBadgeText, { color: m.color }]}>Current tier</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
 
           {/* Recent Reward History */}
           {rewardTxs.length > 0 && (
@@ -232,6 +369,33 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center" },
   section: { paddingHorizontal: 20, marginTop: 22, marginBottom: 8 },
   sectionTitle: { fontSize: 17, fontWeight: "700" as const, fontFamily: "Inter_700Bold" },
+  sectionSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 3 },
+  progressCard: { marginHorizontal: 20, borderRadius: 20, borderWidth: 1, padding: 18, gap: 12, marginBottom: 14 },
+  progressTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  progressTierRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  tierDot: { width: 8, height: 8, borderRadius: 4 },
+  progressTierLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  progressPts: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  progressBarBg: { height: 8, borderRadius: 4, overflow: "hidden" },
+  progressBarFill: { height: 8, borderRadius: 4 },
+  progressPtRow: { flexDirection: "row", justifyContent: "space-between" },
+  progressPtLabel: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  perkRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, borderRadius: 10, borderWidth: 1, padding: 10 },
+  perkText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  milestoneLadder: { marginHorizontal: 20, borderRadius: 20, borderWidth: 1, overflow: "hidden", marginBottom: 4 },
+  milestoneRow: { flexDirection: "row", padding: 16, gap: 14 },
+  milestoneTimeline: { alignItems: "center", width: 20 },
+  milestoneDot: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  milestoneCurrentDot: { width: 22, height: 22, borderRadius: 11 },
+  milestoneLine: { width: 2, flex: 1, marginTop: 4, minHeight: 16 },
+  milestoneContent: { flex: 1, gap: 4 },
+  milestoneTitleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  milestoneTierBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
+  milestoneTierText: { fontSize: 11, fontFamily: "Inter_700Bold" },
+  milestonePts: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  milestonePerk: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  currentBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, marginTop: 2 },
+  currentBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   historyRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
   historyIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   historyDesc: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium" },
