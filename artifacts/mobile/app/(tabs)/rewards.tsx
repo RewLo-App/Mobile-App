@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import ClubBadge from "@/components/ClubBadge";
+import { getClubById } from "@/constants/clubs";
 import { Offer, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -109,6 +111,11 @@ function OfferCard({ item, onRedeem, canAfford }: OfferCardProps) {
   );
 }
 
+const LOYALTY_CLUBS = [
+  { club: getClubById("man-city"),      ptsShare: 0.78 },
+  { club: getClubById("stl-cardinals"), ptsShare: 0.22 },
+];
+
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -188,6 +195,63 @@ export default function RewardsScreen() {
               ))}
             </View>
           </LinearGradient>
+
+          {/* ── Club Loyalty card ── */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Club Loyalty</Text>
+            <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
+              Your TrustPay points across all supported clubs
+            </Text>
+          </View>
+          <View style={[styles.clubLoyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {LOYALTY_CLUBS.map((entry, idx) => {
+              const clubPts = Math.round(trustPayPoints * entry.ptsShare);
+              const maxPts = Math.round(trustPayPoints * 0.78);
+              const barPct = maxPts > 0 ? clubPts / maxPts : 0;
+              const isLast = idx === LOYALTY_CLUBS.length - 1;
+              return (
+                <View
+                  key={entry.club.id}
+                  style={[
+                    styles.clubLoyaltyRow,
+                    !isLast && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
+                  ]}
+                >
+                  {/* Badge */}
+                  <ClubBadge club={entry.club} size={56} />
+
+                  {/* Info */}
+                  <View style={styles.clubLoyaltyInfo}>
+                    <View style={styles.clubLoyaltyTopRow}>
+                      <Text style={[styles.clubLoyaltyName, { color: colors.foreground }]}>
+                        {entry.club.shortName}
+                      </Text>
+                      <View style={[styles.leaguePill, { backgroundColor: `${entry.club.accentColor}22`, borderColor: `${entry.club.accentColor}44` }]}>
+                        <Text style={[styles.leaguePillText, { color: entry.club.accentColor }]}>
+                          {entry.club.league}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.clubLoyaltyPts, { color: entry.club.accentColor }]}>
+                      {clubPts.toLocaleString()} pts
+                    </Text>
+                    {/* Mini progress bar */}
+                    <View style={[styles.clubBarBg, { backgroundColor: colors.border }]}>
+                      <View
+                        style={[
+                          styles.clubBarFill,
+                          { width: `${Math.round(barPct * 100)}%`, backgroundColor: entry.club.accentColor },
+                        ]}
+                      />
+                    </View>
+                    <Text style={[styles.clubLoyaltySub, { color: colors.mutedForeground }]}>
+                      {entry.club.name}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
 
           {/* TrustPay Milestones */}
           <View style={styles.section}>
@@ -416,4 +480,15 @@ const styles = StyleSheet.create({
   offerExpiry: { fontSize: 12, fontFamily: "Inter_400Regular" },
   redeemBtn: { borderRadius: 14, paddingVertical: 13, alignItems: "center", marginTop: 4 },
   redeemBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  clubLoyaltyCard: { marginHorizontal: 20, borderRadius: 20, borderWidth: 1, overflow: "hidden", marginBottom: 4 },
+  clubLoyaltyRow: { flexDirection: "row", alignItems: "center", padding: 16, gap: 16 },
+  clubLoyaltyInfo: { flex: 1, gap: 5 },
+  clubLoyaltyTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  clubLoyaltyName: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  leaguePill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
+  leaguePillText: { fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
+  clubLoyaltyPts: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  clubBarBg: { height: 5, borderRadius: 3, overflow: "hidden" },
+  clubBarFill: { height: 5, borderRadius: 3 },
+  clubLoyaltySub: { fontSize: 11, fontFamily: "Inter_400Regular" },
 });

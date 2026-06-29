@@ -143,6 +143,17 @@ export const CLUBS: Club[] = [
     accentColor: "#DC052D",
     badgeBackground: "#DC052D",
   },
+  {
+    id: "stl-cardinals",
+    name: "St. Louis Cardinals",
+    shortName: "Cardinals",
+    abbreviation: "STL",
+    league: "MLB",
+    gradientStart: "#C41E3A",
+    gradientEnd: "#0C2340",
+    accentColor: "#FEDB00",
+    badgeBackground: "#0C2340",
+  },
 ];
 
 export const DEFAULT_CLUB_ID = "man-city";
