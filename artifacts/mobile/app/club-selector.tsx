@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import ClubBadge from "@/components/ClubBadge";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -40,15 +41,10 @@ function ClubCard({ club, isSelected, onSelect }: ClubCardProps) {
         },
       ]}
     >
-      {/* Club color strip */}
-      <LinearGradient
-        colors={[club.gradientStart, club.gradientEnd]}
-        style={styles.clubStrip}
-      >
-        <Text style={[styles.clubAbbrv, { color: club.accentColor === "#FFFFFF" || club.accentColor === "#000000" ? club.accentColor : "#fff" }]}>
-          {club.abbreviation}
-        </Text>
-      </LinearGradient>
+      {/* Club badge */}
+      <View style={styles.clubStrip}>
+        <ClubBadge club={club} size={44} />
+      </View>
 
       {/* Club info */}
       <View style={styles.clubInfo}>
@@ -131,14 +127,11 @@ export default function ClubSelectorScreen() {
         end={{ x: 1, y: 0 }}
         style={styles.selectedPreview}
       >
-        <MaterialCommunityIcons name="soccer" size={28} color="rgba(255,255,255,0.6)" />
+        <ClubBadge club={selectedClub} size={52} />
         <View style={styles.selectedInfo}>
           <Text style={styles.selectedLabel}>Currently Supporting</Text>
           <Text style={styles.selectedName}>{selectedClub.name}</Text>
           <Text style={styles.selectedLeague}>{selectedClub.league}</Text>
-        </View>
-        <View style={[styles.selectedBadge, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
-          <Text style={styles.selectedAbbrv}>{selectedClub.abbreviation}</Text>
         </View>
       </LinearGradient>
 

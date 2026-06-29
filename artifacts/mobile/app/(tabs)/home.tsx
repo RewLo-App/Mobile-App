@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getClubById } from "@/constants/clubs";
+import ClubBadge from "@/components/ClubBadge";
 import { getFixtureForClub, getTimeUntilMatch } from "@/constants/fixtures";
 import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
@@ -145,10 +146,9 @@ export default function HomeScreen() {
             <View style={styles.headerActions}>
               <Pressable
                 onPress={() => router.push("/club-selector")}
-                style={[styles.clubBadge, { backgroundColor: selectedClub.badgeBackground }]}
+                style={styles.clubBadge}
               >
-                <MaterialCommunityIcons name="soccer" size={16} color="#fff" />
-                <Text style={styles.clubBadgeText}>{selectedClub.abbreviation}</Text>
+                <ClubBadge club={selectedClub} size={36} />
               </Pressable>
               <Pressable style={[styles.notifBtn, { backgroundColor: colors.card }]}>
                 <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
@@ -351,8 +351,7 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13, fontFamily: "Inter_400Regular" },
   userName: { fontSize: 22, fontWeight: "700" as const, fontFamily: "Inter_700Bold" },
   headerActions: { flexDirection: "row", gap: 10, alignItems: "center" },
-  clubBadge: { flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, gap: 5 },
-  clubBadgeText: { color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  clubBadge: { borderRadius: 20, overflow: "hidden" },
   notifBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   balanceCard: {
     borderRadius: 22,
