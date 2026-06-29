@@ -17,8 +17,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { getClubById } from "@/constants/clubs";
 import ClubBadge from "@/components/ClubBadge";
+import { getClubById } from "@/constants/clubs";
 import { getFixtureForClub, getTimeUntilMatch } from "@/constants/fixtures";
 import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
@@ -74,6 +74,11 @@ function TransactionRow({ item }: { item: Transaction }) {
     </View>
   );
 }
+
+const LOYALTY_CLUBS = [
+  { club: getClubById("man-city"),      ptsShare: 0.78 },
+  { club: getClubById("stl-cardinals"), ptsShare: 0.22 },
+];
 
 export default function HomeScreen() {
   const colors = useColors();
@@ -289,25 +294,54 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Club Loyalty Banner */}
+        {/* Club Loyalty Card */}
         <View style={styles.section}>
-          <LinearGradient
-            colors={[selectedClub.gradientStart, selectedClub.gradientEnd]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.loyaltyBanner}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.loyaltyTitle}>Club Loyalty Status</Text>
-              <Text style={styles.loyaltyClub}>{selectedClub.name}</Text>
-              <Text style={styles.loyaltyPoints}>
-                Gold Member · {trustPayPoints.toLocaleString()} pts
-              </Text>
-            </View>
-            <View style={styles.loyaltyBadge}>
-              <Text style={styles.loyaltyAbbrv}>{selectedClub.abbreviation}</Text>
-            </View>
-          </LinearGradient>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Club Loyalty</Text>
+            <Pressable onPress={() => router.push("/(tabs)/rewards")}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>View all</Text>
+            </Pressable>
+          </View>
+          <View style={[styles.loyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {LOYALTY_CLUBS.map((entry, idx) => {
+              const clubPts = Math.round(trustPayPoints * entry.ptsShare);
+              const maxPts = Math.round(trustPayPoints * 0.78);
+              const barPct = maxPts > 0 ? clubPts / maxPts : 0;
+              const isLast = idx === LOYALTY_CLUBS.length - 1;
+              return (
+                <View
+                  key={entry.club.id}
+                  style={[
+                    styles.loyaltyRow,
+                    !isLast && { borderBottomColor: colors.border, borderBottomWidth: StyleSheet.hairlineWidth },
+                  ]}
+                >
+                  <ClubBadge club={entry.club} size={52} />
+                  <View style={styles.loyaltyInfo}>
+                    <View style={styles.loyaltyTopRow}>
+                      <Text style={[styles.loyaltyClubName, { color: colors.foreground }]}>
+                        {entry.club.shortName}
+                      </Text>
+                      <View style={[styles.loyaltyLeaguePill, { backgroundColor: `${entry.club.accentColor}22`, borderColor: `${entry.club.accentColor}44` }]}>
+                        <Text style={[styles.loyaltyLeagueText, { color: entry.club.accentColor }]}>
+                          {entry.club.league}
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.loyaltyPts, { color: entry.club.accentColor }]}>
+                      {clubPts.toLocaleString()} pts
+                    </Text>
+                    <View style={[styles.loyaltyBarBg, { backgroundColor: colors.border }]}>
+                      <View style={[styles.loyaltyBarFill, { width: `${Math.round(barPct * 100)}%`, backgroundColor: entry.club.accentColor }]} />
+                    </View>
+                    <Text style={[styles.loyaltySub, { color: colors.mutedForeground }]}>
+                      {entry.club.name}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
       </ScrollView>
 
@@ -396,12 +430,17 @@ const styles = StyleSheet.create({
   livePillText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
   todayPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.25)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   upcomingPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
-  loyaltyBanner: { borderRadius: 18, padding: 20, flexDirection: "row", alignItems: "center", gap: 14 },
-  loyaltyTitle: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 4 },
-  loyaltyClub: { color: "#fff", fontSize: 18, fontFamily: "Inter_700Bold", marginBottom: 4 },
-  loyaltyPoints: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium" },
-  loyaltyBadge: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
-  loyaltyAbbrv: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 0.5, textAlign: "center" as const },
+  loyaltyCard: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
+  loyaltyRow: { flexDirection: "row", alignItems: "center", padding: 14, gap: 14 },
+  loyaltyInfo: { flex: 1, gap: 5 },
+  loyaltyTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  loyaltyClubName: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  loyaltyLeaguePill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 20, borderWidth: 1 },
+  loyaltyLeagueText: { fontSize: 9, fontFamily: "Inter_600SemiBold", textTransform: "uppercase" as const, letterSpacing: 0.5 },
+  loyaltyPts: { fontSize: 20, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  loyaltyBarBg: { height: 5, borderRadius: 3, overflow: "hidden" },
+  loyaltyBarFill: { height: 5, borderRadius: 3 },
+  loyaltySub: { fontSize: 11, fontFamily: "Inter_400Regular" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 14 },
   modalHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#1A3A5C", alignSelf: "center", marginBottom: 8 },
