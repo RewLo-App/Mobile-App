@@ -16,8 +16,88 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { getClubById } from "@/constants/clubs";
-import { useWallet } from "@/context/WalletContext";
+import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+
+type FilterType = "All" | "Sent" | "Received" | "Rewards";
+
+const ICON_MAP: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
+  send:    { name: "arrow-up-circle",   color: "#EF4444" },
+  receive: { name: "arrow-down-circle", color: "#22C55E" },
+  payment: { name: "card",              color: "#3B82F6" },
+  reward:  { name: "star",              color: "#F59E0B" },
+  topup:   { name: "add-circle",        color: "#22C55E" },
+};
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = (now.getTime() - d.getTime()) / 1000;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 2) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function groupByDate(transactions: Transaction[]) {
+  const groups: { title: string; data: Transaction[] }[] = [];
+  const map = new Map<string, Transaction[]>();
+  transactions.forEach((tx) => {
+    const d = new Date(tx.date);
+    const now = new Date();
+    const diff = (now.getTime() - d.getTime()) / 86400000;
+    let label: string;
+    if (diff < 1) label = "Today";
+    else if (diff < 2) label = "Yesterday";
+    else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(tx);
+  });
+  map.forEach((data, title) => groups.push({ title, data }));
+  return groups;
+}
+
+function TxRow({ item }: { item: Transaction }) {
+  const colors = useColors();
+  const icon = ICON_MAP[item.type] ?? { name: "ellipse" as keyof typeof Ionicons.glyphMap, color: colors.mutedForeground };
+  const amountStr =
+    item.type === "reward"
+      ? "Points"
+      : `${item.amount >= 0 ? "+" : ""}${Math.abs(item.amount).toFixed(2)} USDC`;
+  const amountColor =
+    item.type === "reward" ? "#F59E0B" : item.amount >= 0 ? "#22C55E" : colors.foreground;
+
+  return (
+    <View style={[styles.txItem, { borderBottomColor: colors.border }]}>
+      <View style={[styles.txIcon, { backgroundColor: `${icon.color}22` }]}>
+        <Ionicons name={icon.name} size={22} color={icon.color} />
+      </View>
+      <View style={styles.txBody}>
+        <View style={styles.txRow}>
+          <Text style={[styles.txDesc, { color: colors.foreground }]} numberOfLines={1}>
+            {item.description}
+          </Text>
+          <Text style={[styles.txAmount, { color: amountColor }]}>{amountStr}</Text>
+        </View>
+        <View style={styles.txMeta}>
+          {item.merchant ? (
+            <Text style={[styles.txMetaText, { color: colors.mutedForeground }]}>
+              {item.merchant}
+            </Text>
+          ) : null}
+          <Text style={[styles.txDate, { color: colors.mutedForeground }]}>
+            {formatDate(item.date)}
+          </Text>
+          {item.status === "pending" && (
+            <View style={[styles.pendingBadge, { backgroundColor: "#F59E0B22" }]}>
+              <Text style={[styles.pendingText, { color: "#F59E0B" }]}>Pending</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
 
 interface SettingRowProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -31,17 +111,7 @@ interface SettingRowProps {
   onToggle?: (v: boolean) => void;
 }
 
-function SettingRow({
-  icon,
-  label,
-  value,
-  onPress,
-  showArrow = true,
-  danger,
-  toggle,
-  toggled,
-  onToggle,
-}: SettingRowProps) {
+function SettingRow({ icon, label, value, onPress, showArrow = true, danger, toggle, toggled, onToggle }: SettingRowProps) {
   const colors = useColors();
   return (
     <Pressable
@@ -60,12 +130,7 @@ function SettingRow({
       <View style={styles.settingRight}>
         {value ? <Text style={[styles.settingValue, { color: colors.mutedForeground }]}>{value}</Text> : null}
         {toggle ? (
-          <Switch
-            value={toggled}
-            onValueChange={onToggle}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor="#fff"
-          />
+          <Switch value={toggled} onValueChange={onToggle} trackColor={{ true: colors.primary, false: colors.border }} thumbColor="#fff" />
         ) : showArrow ? (
           <Ionicons name="chevron-forward" size={16} color={colors.mutedForeground} />
         ) : null}
@@ -81,6 +146,7 @@ export default function ProfileScreen() {
   const selectedClub = getClubById(selectedClubId);
   const [biometrics, setBiometrics] = useState(true);
   const [notifications, setNotifications] = useState(true);
+  const [txFilter, setTxFilter] = useState<FilterType>("All");
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -99,10 +165,19 @@ export default function ProfileScreen() {
   };
 
   const totalSpend = Math.abs(
-    transactions
-      .filter((t) => t.amount < 0)
-      .reduce((sum, t) => sum + t.amount, 0)
+    transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)
   );
+
+  const filteredTx = transactions.filter((tx) => {
+    if (txFilter === "All") return true;
+    if (txFilter === "Sent") return tx.type === "send" || tx.type === "payment";
+    if (txFilter === "Received") return tx.type === "receive" || tx.type === "topup";
+    if (txFilter === "Rewards") return tx.type === "reward";
+    return true;
+  });
+
+  const groups = groupByDate(filteredTx);
+  const filters: FilterType[] = ["All", "Sent", "Received", "Rewards"];
 
   return (
     <ScrollView
@@ -150,12 +225,7 @@ export default function ProfileScreen() {
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SettingRow icon="person-outline" label="Personal Info" value={user?.phone} />
           <SettingRow icon="wallet-outline" label="Bank Accounts" value="2 linked" />
-          <SettingRow
-            icon="football-outline"
-            label="My Club"
-            value={selectedClub.shortName}
-            onPress={() => router.push("/club-selector")}
-          />
+          <SettingRow icon="football-outline" label="My Club" value={selectedClub.shortName} onPress={() => router.push("/club-selector")} />
           <SettingRow icon="qr-code-outline" label="My QR Code" />
         </View>
       </View>
@@ -164,14 +234,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Security</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow
-            icon="finger-print-outline"
-            label="Biometrics"
-            toggle
-            toggled={biometrics}
-            onToggle={setBiometrics}
-            showArrow={false}
-          />
+          <SettingRow icon="finger-print-outline" label="Biometrics" toggle toggled={biometrics} onToggle={setBiometrics} showArrow={false} />
           <SettingRow icon="lock-closed-outline" label="Change PIN" />
           <SettingRow icon="shield-checkmark-outline" label="Two-Factor Auth" value="On" />
           <SettingRow icon="key-outline" label="Linked Devices" value="2 devices" />
@@ -182,14 +245,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Preferences</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow
-            icon="notifications-outline"
-            label="Push Notifications"
-            toggle
-            toggled={notifications}
-            onToggle={setNotifications}
-            showArrow={false}
-          />
+          <SettingRow icon="notifications-outline" label="Push Notifications" toggle toggled={notifications} onToggle={setNotifications} showArrow={false} />
           <SettingRow icon="globe-outline" label="Currency" value="USDC" />
           <SettingRow icon="language-outline" label="Language" value="English" />
         </View>
@@ -205,16 +261,52 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* ── Activity History (embedded) ── */}
+      <View style={[styles.section, { marginBottom: 0 }]}>
+        <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Activity</Text>
+      </View>
+
+      {/* Filter chips */}
+      <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
+        {filters.map((f) => (
+          <Pressable
+            key={f}
+            onPress={() => { setTxFilter(f); Haptics.selectionAsync(); }}
+            style={styles.filterTab}
+          >
+            <Text style={[styles.filterTabText, { color: f === txFilter ? colors.primary : colors.mutedForeground }]}>
+              {f}
+            </Text>
+            {f === txFilter && (
+              <View style={[styles.filterUnderline, { backgroundColor: colors.primary }]} />
+            )}
+          </Pressable>
+        ))}
+      </View>
+
+      {/* Transaction groups */}
+      {filteredTx.length === 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name="receipt-outline" size={44} color={colors.border} />
+          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No transactions yet</Text>
+        </View>
+      ) : (
+        groups.map((group) => (
+          <View key={group.title}>
+            <Text style={[styles.dateHeader, { color: colors.mutedForeground }]}>{group.title}</Text>
+            <View style={[styles.txCard, { backgroundColor: colors.card }]}>
+              {group.data.map((tx, idx) => (
+                <TxRow key={tx.id} item={tx} />
+              ))}
+            </View>
+          </View>
+        ))
+      )}
+
       {/* Logout */}
-      <View style={[styles.section, { marginBottom: 8 }]}>
+      <View style={[styles.section, { marginTop: 24 }]}>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow
-            icon="log-out-outline"
-            label="Sign Out"
-            onPress={handleLogout}
-            showArrow={false}
-            danger
-          />
+          <SettingRow icon="log-out-outline" label="Sign Out" onPress={handleLogout} showArrow={false} danger />
         </View>
       </View>
 
@@ -246,5 +338,24 @@ const styles = StyleSheet.create({
   settingLabel: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium" },
   settingRight: { flexDirection: "row", alignItems: "center", gap: 8 },
   settingValue: { fontSize: 13, fontFamily: "Inter_400Regular" },
-  version: { textAlign: "center", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 20, marginBottom: 8 },
+  filterRow: { flexDirection: "row", paddingHorizontal: 20, borderBottomWidth: StyleSheet.hairlineWidth, marginTop: 4 },
+  filterTab: { flex: 1, alignItems: "center", paddingVertical: 12, position: "relative" },
+  filterTabText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  filterUnderline: { position: "absolute", bottom: 0, left: "10%", right: "10%", height: 2, borderRadius: 1 },
+  dateHeader: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 8, fontSize: 13, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
+  txCard: { marginHorizontal: 20, borderRadius: 16, overflow: "hidden" },
+  txItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  txIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", marginRight: 12 },
+  txBody: { flex: 1 },
+  txRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 3 },
+  txDesc: { fontSize: 14, fontFamily: "Inter_500Medium", flex: 1, marginRight: 8 },
+  txAmount: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  txMeta: { flexDirection: "row", gap: 8, alignItems: "center" },
+  txMetaText: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  txDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  pendingBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  pendingText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  empty: { alignItems: "center", paddingTop: 48, paddingBottom: 24, gap: 10 },
+  emptyText: { fontSize: 15, fontFamily: "Inter_500Medium" },
+  version: { textAlign: "center", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 24, marginBottom: 8 },
 });

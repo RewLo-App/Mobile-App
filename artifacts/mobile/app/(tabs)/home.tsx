@@ -278,7 +278,7 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Recent Activity
             </Text>
-            <Pressable onPress={() => router.push("/(tabs)/activity")}>
+            <Pressable onPress={() => router.push("/(tabs)/profile")}>
               <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
             </Pressable>
           </View>

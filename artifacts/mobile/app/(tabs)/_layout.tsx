@@ -24,10 +24,6 @@ function NativeTabLayout() {
         <Icon sf={{ default: "star", selected: "star.fill" }} />
         <Label>Rewards</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="activity">
-        <Icon sf={{ default: "list.bullet", selected: "list.bullet" }} />
-        <Label>Activity</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
         <Label>Profile</Label>
@@ -112,18 +108,7 @@ function ClassicTabLayout() {
             ),
         }}
       />
-      <Tabs.Screen
-        name="activity"
-        options={{
-          title: "Activity",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="list.bullet" tintColor={color} size={24} />
-            ) : (
-              <Ionicons name="list-outline" size={22} color={color} />
-            ),
-        }}
-      />
+      <Tabs.Screen name="activity" options={{ href: null }} />
       <Tabs.Screen
         name="profile"
         options={{
