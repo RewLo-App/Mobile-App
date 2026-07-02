@@ -290,7 +290,7 @@ export default function ScanScreen() {
           </View>
           <Text style={[styles.permTitle, { color: colors.foreground }]}>Camera Access</Text>
           <Text style={[styles.permSub, { color: colors.mutedForeground }]}>
-            Homefield needs camera access to scan QR codes for payments and peer-to-peer transfers.
+            Rewlo needs camera access to scan QR codes for payments and peer-to-peer transfers.
           </Text>
           <Pressable
             onPress={requestPermission}
@@ -357,7 +357,7 @@ export default function ScanScreen() {
       <View style={styles.instructionWrap}>
         <View style={{ height: topPad + 80 + SCAN_SIZE + 24 }} />
         <Text style={styles.instruction}>
-          Point at a Homefield QR code to pay
+          Point at a Rewlo QR code to pay
         </Text>
         <Text style={styles.instructionSub}>
           In-stadium · Merchants · Peer-to-peer

@@ -69,7 +69,7 @@ const WalletContext = createContext<WalletContextType | null>(null);
 const MOCK_USER: User = {
   id: "usr_001",
   name: "Alex Johnson",
-  email: "alex@homefield.io",
+  email: "alex@rewlo.io",
   phone: "+1 (555) 0134",
   club: "Manchester City",
   memberSince: "Jan 2024",
@@ -137,7 +137,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     type: "receive",
     amount: 75.0,
     description: "Referral Reward",
-    merchant: "Homefield",
+    merchant: "Rewlo",
     date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     status: "completed",
   },
@@ -164,7 +164,7 @@ const MOCK_CARDS: VirtualCard[] = [
     expiryYear: 27,
     gradientStart: "#0D1B2A",
     gradientEnd: "#1C3A5C",
-    clubName: "Homefield Premium",
+    clubName: "Rewlo Premium",
     isDefault: false,
     cardholderName: "ALEX JOHNSON",
   },
@@ -245,8 +245,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     Promise.all([
-      AsyncStorage.getItem("homefield_auth"),
-      AsyncStorage.getItem("homefield_club"),
+      AsyncStorage.getItem("rewlo_auth"),
+      AsyncStorage.getItem("rewlo_club"),
     ]).then(([auth, club]) => {
       if (auth === "true") {
         setIsAuthenticated(true);
@@ -260,7 +260,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, _password: string): Promise<boolean> => {
     if (email.length > 0) {
-      await AsyncStorage.setItem("homefield_auth", "true");
+      await AsyncStorage.setItem("rewlo_auth", "true");
       setIsAuthenticated(true);
       setUser(MOCK_USER);
       return true;
@@ -270,7 +270,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   const setSelectedClub = useCallback(async (id: string) => {
     setSelectedClubId(id);
-    await AsyncStorage.setItem("homefield_club", id);
+      await AsyncStorage.setItem("rewlo_club", id);
     const club = getClubById(id);
     setCards((prev) =>
       prev.map((c) =>
@@ -282,7 +282,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await AsyncStorage.removeItem("homefield_auth");
+    await AsyncStorage.removeItem("rewlo_auth");
     setIsAuthenticated(false);
     setUser(null);
   }, []);

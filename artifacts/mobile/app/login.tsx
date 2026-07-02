@@ -47,7 +47,7 @@ export default function LoginScreen() {
   };
 
   const fillDemo = () => {
-    setEmail("alex@homefield.io");
+    setEmail("alex@rewlo.io");
     setPassword("password123");
     setError("");
   };
@@ -70,9 +70,9 @@ export default function LoginScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-              <Text style={styles.logoText}>H</Text>
+              <Text style={styles.logoText}>R</Text>
             </View>
-            <Text style={styles.brand}>Homefield</Text>
+            <Text style={styles.brand}>Rewlo</Text>
             <Text style={styles.tagline}>Your Sports Fan Wallet</Text>
           </View>
 

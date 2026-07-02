@@ -337,7 +337,7 @@ export default function ProfileScreen() {
       </View>
 
       <Text style={[styles.version, { color: colors.mutedForeground }]}>
-        Homefield v1.0.0 · Powered by USDC
+        Rewlo v1.0.0 · Powered by USDC
       </Text>
     </ScrollView>
   );
