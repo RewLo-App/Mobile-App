@@ -134,9 +134,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 100 : insets.bottom + 100 }}
       >
-        {/* Header */}
+        {/* Header — themed to primary club */}
         <LinearGradient
-          colors={["#041828", "#062040", "#041120"]}
+          colors={[selectedClub.gradientStart, selectedClub.gradientEnd, "#041120"] as [string, string, string]}
           style={[styles.headerGradient, { paddingTop: topPad + 16 }]}
         >
           <View style={styles.headerRow}>

@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Animated,
   FlatList,
   Image,
   KeyboardAvoidingView,
@@ -18,7 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ClubBadge from "@/components/ClubBadge";
-import { Club, CLUB_LOGO_URLS, CLUBS } from "@/constants/clubs";
+import { Club, CLUB_LOGO_URLS, CLUBS, getClubById } from "@/constants/clubs";
 import { useWallet } from "@/context/WalletContext";
 
 // ── US-only leagues ───────────────────────────────────────────────
@@ -91,7 +92,7 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const { completeOnboarding } = useWallet();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Step 1 state
   const [primaryLeague, setPrimaryLeague] = useState<UsLeague>("NFL");
@@ -121,7 +122,7 @@ export default function OnboardingScreen() {
   // ── Handlers ──────────────────────────────────────────────────
   const goBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStep((s) => (s === 2 ? 1 : 2) as 1 | 2 | 3);
+    setStep((s) => Math.max(1, s - 1) as 1 | 2 | 3 | 4);
   };
 
   const handleStep1Next = () => {
@@ -160,21 +161,43 @@ export default function OnboardingScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const followed = [primaryClubId!, ...(followsOther && otherClubId ? [otherClubId] : [])];
     await completeOnboarding(email, primaryClubId!, followed);
-    router.replace("/(tabs)/home");
+
+    // Send welcome email (non-blocking — don't wait for it to finish)
+    const club = primaryClubId ? getClubById(primaryClubId) : null;
+    fetch("/api/send-welcome-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        name: email.split("@")[0],
+        teamName: club?.name ?? "your team",
+        gradientStart: club?.gradientStart ?? "#2563EB",
+        gradientEnd: club?.gradientEnd ?? "#041828",
+      }),
+    }).catch(() => {/* non-fatal */});
+
+    setLoading(false);
+    setStep(4);
   };
+
+  // ── Dynamic gradient based on selected primary club ───────────
+  const primaryClub = primaryClubId ? getClubById(primaryClubId) : null;
+  const gradColors: [string, string, string] = primaryClub
+    ? [primaryClub.gradientStart, primaryClub.gradientEnd + "BB", BG_DARK]
+    : [BG_DARK, "#041828", "#062040"];
 
   // ── Render ────────────────────────────────────────────────────
   return (
-    <LinearGradient colors={[BG_DARK, "#041828", "#062040"]} style={s.gradient}>
+    <LinearGradient colors={gradColors} style={s.gradient}>
       <View style={[s.root, { paddingTop: topPad + 10, paddingBottom: btmPad }]}>
-        {/* Back button (steps 2 & 3) */}
-        {step > 1 && (
+        {/* Back button (steps 2 & 3 only) */}
+        {step > 1 && step < 4 && (
           <Pressable onPress={goBack} style={[s.backBtn, { top: topPad + 14 }]}>
             <Ionicons name="arrow-back" size={20} color={WHITE} />
           </Pressable>
         )}
 
-        <ProgressBar step={step} />
+        {step < 4 && <ProgressBar step={step as 1 | 2 | 3} />}
 
         {step === 1 && <Step1
           leagues={US_LEAGUES}
@@ -208,6 +231,12 @@ export default function OnboardingScreen() {
           errors={errors}
           loading={loading}
           onSubmit={handleCreateAccount}
+          btmPad={btmPad}
+        />}
+
+        {step === 4 && <Step4
+          email={email}
+          club={primaryClub}
           btmPad={btmPad}
         />}
       </View>
@@ -577,6 +606,60 @@ function Step3({
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STEP 4 — Confirmation
+// ═══════════════════════════════════════════════════════════════
+function Step4({ email, club, btmPad }: { email: string; club: ReturnType<typeof getClubById> | null; btmPad: number }) {
+  const pulseAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.spring(pulseAnim, { toValue: 1, friction: 5, tension: 60, useNativeDriver: true }).start();
+  }, []);
+
+  return (
+    <View style={[s.flex, { alignItems: "center", justifyContent: "center", paddingHorizontal: 32 }]}>
+      {/* Animated check circle */}
+      <Animated.View style={{ transform: [{ scale: pulseAnim }], marginBottom: 32 }}>
+        <View style={{
+          width: 96, height: 96, borderRadius: 48,
+          backgroundColor: club?.accentColor ?? "#2563EB",
+          alignItems: "center", justifyContent: "center",
+          shadowColor: club?.accentColor ?? "#2563EB",
+          shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 24,
+        }}>
+          <Ionicons name="checkmark" size={52} color={WHITE} />
+        </View>
+      </Animated.View>
+
+      <Text style={{ color: WHITE, fontSize: 26, fontWeight: "800", textAlign: "center", marginBottom: 12 }}>
+        You're in!
+      </Text>
+      <Text style={{ color: "rgba(255,255,255,0.65)", fontSize: 15, textAlign: "center", lineHeight: 22, marginBottom: 8 }}>
+        Account created for
+      </Text>
+      <Text style={{ color: WHITE, fontSize: 16, fontWeight: "700", textAlign: "center", marginBottom: 28 }}>
+        {email}
+      </Text>
+      <Text style={{ color: "rgba(255,255,255,0.55)", fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 48 }}>
+        A confirmation email is on its way.{club ? `\nWelcome to the ${club.name} family!` : ""}
+      </Text>
+
+      <Pressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.replace("/(tabs)/home"); }}
+        style={({ pressed }) => [{
+          height: 56, borderRadius: 16, paddingHorizontal: 32,
+          backgroundColor: club?.accentColor ?? "#2563EB",
+          flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "center" as const,
+          gap: 10, opacity: pressed ? 0.85 : 1,
+        }]}
+      >
+        <Text style={{ color: WHITE, fontSize: 16, fontWeight: "700" }}>Open your wallet</Text>
+        <Ionicons name="arrow-forward" size={18} color={WHITE} />
+      </Pressable>
+    </View>
   );
 }
 
