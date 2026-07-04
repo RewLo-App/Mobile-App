@@ -271,22 +271,22 @@ function Step1({
           return (
             <Pressable
               onPress={() => onSelect(item.id)}
-              style={({ pressed }) => [
-                s.clubCard,
-                {
-                  backgroundColor: sel ? `${item.accentColor}1A` : CARD_BG,
-                  borderColor: sel ? item.accentColor : BORDER,
-                  opacity: pressed ? 0.8 : 1,
-                },
-              ]}
+              style={({ pressed }) => [s.clubItem, { opacity: pressed ? 0.75 : 1 }]}
             >
-              {sel && (
-                <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
-                  <Ionicons name="checkmark" size={10} color="#000" />
-                </View>
-              )}
-              <ClubBadge club={item} size={46} />
-              <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
+              <View style={[
+                s.clubCircle,
+                sel
+                  ? { borderColor: item.accentColor, borderWidth: 2.5, backgroundColor: `${item.badgeBackground}CC` }
+                  : { borderColor: "rgba(255,255,255,0.12)", borderWidth: 1.5, backgroundColor: `${item.badgeBackground}66` },
+              ]}>
+                <ClubBadge club={item} size={46} />
+                {sel && (
+                  <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
+                    <Ionicons name="checkmark" size={9} color="#000" />
+                  </View>
+                )}
+              </View>
+              <Text style={[s.clubName, { color: sel ? WHITE : "#94A3B8" }]} numberOfLines={1}>
                 {item.shortName}
               </Text>
             </Pressable>
@@ -405,22 +405,22 @@ function Step2({
               return (
                 <Pressable
                   onPress={() => onSelect(item.id)}
-                  style={({ pressed }) => [
-                    s.clubCard,
-                    {
-                      backgroundColor: sel ? `${item.accentColor}1A` : CARD_BG,
-                      borderColor: sel ? item.accentColor : BORDER,
-                      opacity: pressed ? 0.8 : 1,
-                    },
-                  ]}
+                  style={({ pressed }) => [s.clubItem, { opacity: pressed ? 0.75 : 1 }]}
                 >
-                  {sel && (
-                    <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
-                      <Ionicons name="checkmark" size={10} color="#000" />
-                    </View>
-                  )}
-                  <ClubBadge club={item} size={46} />
-                  <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
+                  <View style={[
+                    s.clubCircle,
+                    sel
+                      ? { borderColor: item.accentColor, borderWidth: 2.5, backgroundColor: `${item.badgeBackground}CC` }
+                      : { borderColor: "rgba(255,255,255,0.12)", borderWidth: 1.5, backgroundColor: `${item.badgeBackground}66` },
+                  ]}>
+                    <ClubBadge club={item} size={46} />
+                    {sel && (
+                      <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
+                        <Ionicons name="checkmark" size={9} color="#000" />
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[s.clubName, { color: sel ? WHITE : "#94A3B8" }]} numberOfLines={1}>
                     {item.shortName}
                   </Text>
                 </Pressable>
@@ -600,22 +600,25 @@ const s = StyleSheet.create({
   tabActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
   tabInactive: { backgroundColor: CARD_BG, borderColor: BORDER },
   tabText: { fontSize: 13, fontWeight: "600" as const },
-  grid: { paddingHorizontal: 10, paddingBottom: 8 },
-  gridRow: { gap: 8, marginBottom: 8 },
-  clubCard: {
+  grid: { paddingHorizontal: 8, paddingBottom: 8 },
+  gridRow: { gap: 4, marginBottom: 12 },
+  clubItem: {
     flex: 1,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
     alignItems: "center",
-    gap: 6,
+    gap: 7,
+  },
+  clubCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
   },
   checkBadge: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 2,
+    right: 2,
     width: 18,
     height: 18,
     borderRadius: 9,
