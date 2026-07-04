@@ -259,7 +259,7 @@ function Step1({
         key={activeLeague}
         data={clubs}
         keyExtractor={(c) => c.id}
-        numColumns={2}
+        numColumns={4}
         contentContainerStyle={s.grid}
         columnWrapperStyle={s.gridRow}
         showsVerticalScrollIndicator={false}
@@ -279,10 +279,10 @@ function Step1({
             >
               {sel && (
                 <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
-                  <Ionicons name="checkmark" size={10} color="#000" />
+                  <Ionicons name="checkmark" size={8} color="#000" />
                 </View>
               )}
-              <ClubBadge club={item} size={52} />
+              <ClubBadge club={item} size={34} />
               <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
                 {item.shortName}
               </Text>
@@ -390,7 +390,7 @@ function Step2({
             key={activeLeague}
             data={clubs}
             keyExtractor={(c) => c.id}
-            numColumns={2}
+            numColumns={4}
             contentContainerStyle={s.grid}
             columnWrapperStyle={s.gridRow}
             showsVerticalScrollIndicator={false}
@@ -410,10 +410,10 @@ function Step2({
                 >
                   {sel && (
                     <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
-                      <Ionicons name="checkmark" size={10} color="#000" />
+                      <Ionicons name="checkmark" size={8} color="#000" />
                     </View>
                   )}
-                  <ClubBadge club={item} size={52} />
+                  <ClubBadge club={item} size={34} />
                   <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
                     {item.shortName}
                   </Text>
@@ -593,28 +593,29 @@ const s = StyleSheet.create({
   tabActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
   tabInactive: { backgroundColor: CARD_BG, borderColor: BORDER },
   tabText: { fontSize: 13, fontWeight: "600" as const },
-  grid: { paddingHorizontal: 16, paddingBottom: 8 },
-  gridRow: { gap: 10, marginBottom: 10 },
+  grid: { paddingHorizontal: 12, paddingBottom: 8 },
+  gridRow: { gap: 6, marginBottom: 6 },
   clubCard: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1.5,
-    padding: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     alignItems: "center",
-    gap: 8,
+    gap: 5,
     position: "relative",
   },
   checkBadge: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: 5,
+    right: 5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
   },
-  clubName: { fontSize: 13, fontWeight: "600" as const, textAlign: "center" as const },
+  clubName: { fontSize: 10, fontWeight: "600" as const, textAlign: "center" as const },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.07)" },
   cta: {
     height: 56,
