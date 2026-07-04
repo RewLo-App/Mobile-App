@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,7 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import ClubBadge from "@/components/ClubBadge";
-import { Club, CLUBS } from "@/constants/clubs";
+import { Club, CLUB_LOGO_URLS, CLUBS } from "@/constants/clubs";
 import { useWallet } from "@/context/WalletContext";
 
 // ── US-only leagues ───────────────────────────────────────────────
@@ -268,6 +269,7 @@ function Step1({
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
           const sel = item.id === selectedId;
+          const logoUrl = CLUB_LOGO_URLS[item.id];
           return (
             <Pressable
               onPress={() => onSelect(item.id)}
@@ -279,7 +281,9 @@ function Step1({
                   ? { borderColor: item.accentColor, borderWidth: 2.5, backgroundColor: `${item.badgeBackground}CC` }
                   : { borderColor: "rgba(255,255,255,0.12)", borderWidth: 1.5, backgroundColor: `${item.badgeBackground}66` },
               ]}>
-                <ClubBadge club={item} size={46} />
+                {logoUrl
+                  ? <Image source={{ uri: logoUrl }} style={s.teamLogo} resizeMode="contain" />
+                  : <ClubBadge club={item} size={46} />}
                 {sel && (
                   <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
                     <Ionicons name="checkmark" size={9} color="#000" />
@@ -402,6 +406,7 @@ function Step2({
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
               const sel = item.id === selectedId;
+              const logoUrl = CLUB_LOGO_URLS[item.id];
               return (
                 <Pressable
                   onPress={() => onSelect(item.id)}
@@ -413,7 +418,9 @@ function Step2({
                       ? { borderColor: item.accentColor, borderWidth: 2.5, backgroundColor: `${item.badgeBackground}CC` }
                       : { borderColor: "rgba(255,255,255,0.12)", borderWidth: 1.5, backgroundColor: `${item.badgeBackground}66` },
                   ]}>
-                    <ClubBadge club={item} size={46} />
+                    {logoUrl
+                      ? <Image source={{ uri: logoUrl }} style={s.teamLogo} resizeMode="contain" />
+                      : <ClubBadge club={item} size={46} />}
                     {sel && (
                       <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
                         <Ionicons name="checkmark" size={9} color="#000" />
@@ -625,6 +632,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  teamLogo: { width: 56, height: 56 },
   clubName: { fontSize: 12, fontWeight: "600" as const, textAlign: "center" as const },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.07)" },
   cta: {

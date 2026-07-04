@@ -710,3 +710,80 @@ export function getClubById(id: string): Club {
 }
 
 export const SOCCER_LEAGUES = ["Premier League", "La Liga", "Ligue 1", "Serie A", "Bundesliga"];
+
+// ESPN CDN logo URLs — used in the onboarding club picker
+const nfl = (code: string) => `https://a.espncdn.com/i/teamlogos/nfl/500/${code}.png`;
+const nba = (code: string) => `https://a.espncdn.com/i/teamlogos/nba/500/${code}.png`;
+const mlb = (code: string) => `https://a.espncdn.com/i/teamlogos/mlb/500/${code}.png`;
+const nhl = (code: string) => `https://a.espncdn.com/i/teamlogos/nhl/500/${code}.png`;
+const soccer = (id: number) => `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`;
+
+export const CLUB_LOGO_URLS: Record<string, string> = {
+  // NFL
+  "ny-giants":    nfl("nyg"),
+  "la-rams":      nfl("lar"),
+  "bal-ravens":   nfl("bal"),
+  "den-broncos":  nfl("den"),
+  "lv-raiders":   nfl("lv"),
+  "min-vikings":  nfl("min"),
+  "tb-bucs":      nfl("tb"),
+  "ari-cardinals": nfl("ari"),
+  "atl-falcons":  nfl("atl"),
+  "kc-chiefs":    nfl("kc"),
+  "dal-cowboys":  nfl("dal"),
+  "gb-packers":   nfl("gb"),
+  "ne-patriots":  nfl("ne"),
+  "sf-49ers":     nfl("sf"),
+  "chi-bears":    nfl("chi"),
+  "pit-steelers": nfl("pit"),
+  "sea-seahawks": nfl("sea"),
+  "phi-eagles":   nfl("phi"),
+  "buf-bills":    nfl("buf"),
+  "mia-dolphins": nfl("mia"),
+  // NBA
+  "la-lakers":    nba("lal"),
+  "gs-warriors":  nba("gs"),
+  "chi-bulls":    nba("chi"),
+  "bos-celtics":  nba("bos"),
+  "mia-heat":     nba("mia"),
+  "ny-knicks":    nba("ny"),
+  "phx-suns":     nba("phx"),
+  "mil-bucks":    nba("mil"),
+  // MLB
+  "stl-cardinals": mlb("stl"),
+  "ny-yankees":   mlb("nyy"),
+  "la-dodgers":   mlb("lad"),
+  "bos-redsox":   mlb("bos"),
+  "chi-cubs":     mlb("chc"),
+  "hou-astros":   mlb("hou"),
+  // NHL
+  "pit-penguins": nhl("pit"),
+  "chi-hawks":    nhl("chi"),
+  "tor-leafs":    nhl("tor"),
+  "bos-bruins":   nhl("bos"),
+  "vgk-knights":  nhl("vgk"),
+  "ny-rangers":   nhl("nyr"),
+  "col-avs":      nhl("col"),
+  "tb-lightning": nhl("tb"),
+  // MLS
+  "la-galaxy":    soccer(392),
+  "atl-united":   soccer(20116),
+  "sea-sounders": soccer(9726),
+  "int-miami":    soccer(28151),
+  "por-timbers":  soccer(9725),
+  "nyc-fc":       soccer(17844),
+  "tor-fc":       soccer(6863),
+  // Soccer
+  "man-city":     soccer(382),
+  "arsenal":      soccer(359),
+  "chelsea":      soccer(363),
+  "liverpool":    soccer(364),
+  "man-utd":      soccer(360),
+  "tottenham":    soccer(367),
+  "barcelona":    soccer(83),
+  "real-madrid":  soccer(86),
+  "psg":          soccer(160),
+  "juventus":     soccer(111),
+  "dortmund":     soccer(124),
+  "bayern":       soccer(132),
+};
