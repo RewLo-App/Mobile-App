@@ -239,20 +239,22 @@ function Step1({
       </View>
 
       {/* League tabs */}
-      <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.tabs}
-      >
-        {leagues.map((l) => (
-          <Pressable
-            key={l}
-            onPress={() => { setActiveLeague(l); Haptics.selectionAsync(); }}
-            style={[s.tab, activeLeague === l ? s.tabActive : s.tabInactive]}
-          >
-            <Text style={[s.tabText, { color: activeLeague === l ? WHITE : MUTED }]}>{l}</Text>
-          </Pressable>
-        ))}
-      </ScrollView>
+      <View style={s.tabsWrap}>
+        <ScrollView
+          horizontal showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.tabs}
+        >
+          {leagues.map((l) => (
+            <Pressable
+              key={l}
+              onPress={() => { setActiveLeague(l); Haptics.selectionAsync(); }}
+              style={[s.tab, activeLeague === l ? s.tabActive : s.tabInactive]}
+            >
+              <Text style={[s.tabText, { color: activeLeague === l ? WHITE : MUTED }]}>{l}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Club grid */}
       <FlatList
@@ -260,6 +262,7 @@ function Step1({
         data={clubs}
         keyExtractor={(c) => c.id}
         numColumns={3}
+        style={s.flex}
         contentContainerStyle={s.grid}
         columnWrapperStyle={s.gridRow}
         showsVerticalScrollIndicator={false}
@@ -279,10 +282,10 @@ function Step1({
             >
               {sel && (
                 <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
-                  <Ionicons name="checkmark" size={8} color="#000" />
+                  <Ionicons name="checkmark" size={10} color="#000" />
                 </View>
               )}
-              <ClubBadge club={item} size={40} />
+              <ClubBadge club={item} size={46} />
               <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
                 {item.shortName}
               </Text>
@@ -371,26 +374,29 @@ function Step2({
         <View style={s.flex}>
           <Text style={s.pickOneLabel}>Pick one more club</Text>
 
-          <ScrollView
-            horizontal showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.tabs}
-          >
-            {leagues.map((l) => (
-              <Pressable
-                key={l}
-                onPress={() => { setActiveLeague(l); Haptics.selectionAsync(); }}
-                style={[s.tab, activeLeague === l ? s.tabActive : s.tabInactive]}
-              >
-                <Text style={[s.tabText, { color: activeLeague === l ? WHITE : MUTED }]}>{l}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <View style={s.tabsWrap}>
+            <ScrollView
+              horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.tabs}
+            >
+              {leagues.map((l) => (
+                <Pressable
+                  key={l}
+                  onPress={() => { setActiveLeague(l); Haptics.selectionAsync(); }}
+                  style={[s.tab, activeLeague === l ? s.tabActive : s.tabInactive]}
+                >
+                  <Text style={[s.tabText, { color: activeLeague === l ? WHITE : MUTED }]}>{l}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
 
           <FlatList
             key={activeLeague}
             data={clubs}
             keyExtractor={(c) => c.id}
             numColumns={3}
+            style={s.flex}
             contentContainerStyle={s.grid}
             columnWrapperStyle={s.gridRow}
             showsVerticalScrollIndicator={false}
@@ -410,10 +416,10 @@ function Step2({
                 >
                   {sel && (
                     <View style={[s.checkBadge, { backgroundColor: item.accentColor }]}>
-                      <Ionicons name="checkmark" size={8} color="#000" />
+                      <Ionicons name="checkmark" size={10} color="#000" />
                     </View>
                   )}
-                  <ClubBadge club={item} size={40} />
+                  <ClubBadge club={item} size={46} />
                   <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
                     {item.shortName}
                   </Text>
@@ -588,34 +594,35 @@ const s = StyleSheet.create({
   logoArea: { alignItems: "center", paddingHorizontal: 24, gap: 6, marginBottom: 16 },
   stepTitle: { fontSize: 22, fontWeight: "700" as const, color: WHITE, textAlign: "center" as const },
   stepSub: { fontSize: 14, color: MUTED, textAlign: "center" as const },
-  tabs: { paddingHorizontal: 20, gap: 8, paddingVertical: 10 },
-  tab: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  tabsWrap: { height: 52, flexShrink: 0 },
+  tabs: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
+  tab: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   tabActive: { backgroundColor: PRIMARY, borderColor: PRIMARY },
   tabInactive: { backgroundColor: CARD_BG, borderColor: BORDER },
   tabText: { fontSize: 13, fontWeight: "600" as const },
-  grid: { paddingHorizontal: 12, paddingBottom: 8 },
-  gridRow: { gap: 6, marginBottom: 6 },
+  grid: { paddingHorizontal: 10, paddingBottom: 8 },
+  gridRow: { gap: 8, marginBottom: 8 },
   clubCard: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1.5,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 4,
     alignItems: "center",
-    gap: 5,
+    gap: 6,
     position: "relative",
   },
   checkBadge: {
     position: "absolute",
-    top: 5,
-    right: 5,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    top: 6,
+    right: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: "center",
     justifyContent: "center",
   },
-  clubName: { fontSize: 10, fontWeight: "600" as const, textAlign: "center" as const },
+  clubName: { fontSize: 12, fontWeight: "600" as const, textAlign: "center" as const },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.07)" },
   cta: {
     height: 56,
