@@ -262,7 +262,7 @@ function Step1({
         key={activeLeague}
         data={clubs}
         keyExtractor={(c) => c.id}
-        numColumns={3}
+        numColumns={4}
         style={s.flex}
         contentContainerStyle={s.grid}
         columnWrapperStyle={s.gridRow}
@@ -399,7 +399,7 @@ function Step2({
             key={activeLeague}
             data={clubs}
             keyExtractor={(c) => c.id}
-            numColumns={3}
+            numColumns={4}
             style={s.flex}
             contentContainerStyle={s.grid}
             columnWrapperStyle={s.gridRow}
@@ -615,9 +615,9 @@ const s = StyleSheet.create({
     gap: 7,
   },
   clubCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
@@ -632,7 +632,7 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  teamLogo: { width: 56, height: 56 },
+  teamLogo: { width: 46, height: 46 },
   clubName: { fontSize: 12, fontWeight: "600" as const, textAlign: "center" as const },
   footer: { paddingHorizontal: 20, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.07)" },
   cta: {
