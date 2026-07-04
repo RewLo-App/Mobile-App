@@ -49,6 +49,8 @@ export interface User {
 
 interface WalletContextType {
   isAuthenticated: boolean;
+  isOnboarded: boolean;
+  followedClubIds: string[];
   user: User | null;
   balance: number;
   trustPayPoints: number;
@@ -59,6 +61,7 @@ interface WalletContextType {
   setSelectedClub: (id: string) => void;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  completeOnboarding: (email: string, primaryClubId: string, clubIds: string[]) => Promise<void>;
   sendMoney: (amount: number, recipient: string) => void;
   redeemOffer: (offerId: string) => void;
   addTransaction: (tx: Omit<Transaction, "id" | "date">) => void;
@@ -235,6 +238,8 @@ const MOCK_OFFERS: Offer[] = [
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isOnboarded, setIsOnboarded] = useState(false);
+  const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [balance, setBalance] = useState(1284.5);
   const [trustPayPoints, setTrustPayPoints] = useState(2350);
@@ -245,15 +250,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     Promise.all([
+      AsyncStorage.getItem("rewlo_onboarded"),
       AsyncStorage.getItem("rewlo_auth"),
       AsyncStorage.getItem("rewlo_club"),
-    ]).then(([auth, club]) => {
-      if (auth === "true") {
+      AsyncStorage.getItem("rewlo_followed_clubs"),
+      AsyncStorage.getItem("rewlo_email"),
+    ]).then(([onboarded, auth, club, followed, email]) => {
+      const loggedIn = onboarded === "true" || auth === "true";
+      if (loggedIn) {
+        setIsOnboarded(true);
         setIsAuthenticated(true);
-        setUser(MOCK_USER);
+        setUser({ ...MOCK_USER, ...(email ? { email } : {}) });
       }
-      if (club) {
-        setSelectedClubId(club);
+      if (club) setSelectedClubId(club);
+      if (followed) {
+        try { setFollowedClubIds(JSON.parse(followed)); } catch {}
       }
     });
   }, []);
@@ -281,9 +292,37 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const completeOnboarding = useCallback(
+    async (email: string, primaryClubId: string, clubIds: string[]) => {
+      await AsyncStorage.multiSet([
+        ["rewlo_onboarded", "true"],
+        ["rewlo_auth", "true"],
+        ["rewlo_email", email],
+        ["rewlo_club", primaryClubId],
+        ["rewlo_followed_clubs", JSON.stringify(clubIds)],
+      ]);
+      setIsOnboarded(true);
+      setIsAuthenticated(true);
+      setFollowedClubIds(clubIds);
+      setSelectedClubId(primaryClubId);
+      setUser({ ...MOCK_USER, email });
+      const club = getClubById(primaryClubId);
+      setCards((prev) =>
+        prev.map((c) =>
+          c.isDefault
+            ? { ...c, gradientStart: club.gradientStart, gradientEnd: club.gradientEnd, clubName: club.name }
+            : c
+        )
+      );
+    },
+    []
+  );
+
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem("rewlo_auth");
+    await AsyncStorage.removeItem("rewlo_onboarded");
     setIsAuthenticated(false);
+    setIsOnboarded(false);
     setUser(null);
   }, []);
 
@@ -334,6 +373,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     <WalletContext.Provider
       value={{
         isAuthenticated,
+        isOnboarded,
+        followedClubIds,
         user,
         balance,
         trustPayPoints,
@@ -344,6 +385,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setSelectedClub,
         login,
         logout,
+        completeOnboarding,
         sendMoney,
         redeemOffer,
         addTransaction,
