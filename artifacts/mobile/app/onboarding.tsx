@@ -259,7 +259,7 @@ function Step1({
         key={activeLeague}
         data={clubs}
         keyExtractor={(c) => c.id}
-        numColumns={4}
+        numColumns={3}
         contentContainerStyle={s.grid}
         columnWrapperStyle={s.gridRow}
         showsVerticalScrollIndicator={false}
@@ -282,7 +282,7 @@ function Step1({
                   <Ionicons name="checkmark" size={8} color="#000" />
                 </View>
               )}
-              <ClubBadge club={item} size={34} />
+              <ClubBadge club={item} size={40} />
               <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
                 {item.shortName}
               </Text>
@@ -390,7 +390,7 @@ function Step2({
             key={activeLeague}
             data={clubs}
             keyExtractor={(c) => c.id}
-            numColumns={4}
+            numColumns={3}
             contentContainerStyle={s.grid}
             columnWrapperStyle={s.gridRow}
             showsVerticalScrollIndicator={false}
@@ -413,7 +413,7 @@ function Step2({
                       <Ionicons name="checkmark" size={8} color="#000" />
                     </View>
                   )}
-                  <ClubBadge club={item} size={34} />
+                  <ClubBadge club={item} size={40} />
                   <Text style={[s.clubName, { color: sel ? WHITE : "#CBD5E1" }]} numberOfLines={1}>
                     {item.shortName}
                   </Text>
