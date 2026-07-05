@@ -61,31 +61,16 @@ const pb = StyleSheet.create({
   seg: { flex: 1, height: 3, borderRadius: 3 },
 });
 
-// ── Rewlo Logo (placeholder – swap when logo file is provided) ────
-function RewloLogo() {
+// ── RewLo Logo ────────────────────────────────────────────────
+function RewloLogo({ light = false }: { light?: boolean }) {
   return (
-    <View style={logo.wrap}>
-      <View style={logo.icon}>
-        {/* Replace this View + Text with an <Image> once logo file is provided */}
-        <Text style={logo.letter}>RL</Text>
-      </View>
-      <Text style={logo.wordmark}>ReLo</Text>
-    </View>
+    <Image
+      source={require("@/assets/images/rewlo-logo-transparent.png")}
+      style={{ width: 180, height: 64, tintColor: light ? "#FFFFFF" : undefined }}
+      resizeMode="contain"
+    />
   );
 }
-const logo = StyleSheet.create({
-  wrap: { alignItems: "center", gap: 10, marginBottom: 8 },
-  icon: {
-    width: 68,
-    height: 68,
-    borderRadius: 18,
-    backgroundColor: PRIMARY,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  letter: { fontSize: 34, fontWeight: "800" as const, color: WHITE },
-  wordmark: { fontSize: 26, fontWeight: "800" as const, color: WHITE, letterSpacing: -0.5 },
-});
 
 // ═════════════════════════════════════════════════════════════════
 export default function OnboardingScreen() {
@@ -585,7 +570,7 @@ function Step3({
 
         {/* Terms note */}
         <Text style={s.terms}>
-          By creating an account you agree to Rewlo's{" "}
+          By creating an account you agree to RewLo's{" "}
           <Text style={{ color: PRIMARY }}>Terms of Service</Text>
           {" "}and{" "}
           <Text style={{ color: PRIMARY }}>Privacy Policy</Text>.

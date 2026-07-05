@@ -337,7 +337,7 @@ export default function ProfileScreen() {
       </View>
 
       <Text style={[styles.version, { color: colors.mutedForeground }]}>
-        Rewlo v1.0.0 · Powered by USDC
+        RewLo v1.0.0 · Powered by USDC
       </Text>
     </ScrollView>
   );

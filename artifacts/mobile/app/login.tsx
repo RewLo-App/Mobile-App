@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -69,10 +70,11 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <View style={[styles.logoContainer, { backgroundColor: colors.primary }]}>
-              <Text style={styles.logoText}>R</Text>
-            </View>
-            <Text style={styles.brand}>Rewlo</Text>
+            <Image
+              source={require("@/assets/images/rewlo-logo-transparent.png")}
+              style={{ width: 180, height: 64, marginBottom: 8 }}
+              resizeMode="contain"
+            />
             <Text style={styles.tagline}>Your Sports Fan Wallet</Text>
           </View>
 
