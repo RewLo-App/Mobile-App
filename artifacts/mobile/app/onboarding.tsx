@@ -67,9 +67,9 @@ function RewloLogo() {
     <View style={logo.wrap}>
       <View style={logo.icon}>
         {/* Replace this View + Text with an <Image> once logo file is provided */}
-        <Text style={logo.letter}>R</Text>
+        <Text style={logo.letter}>RL</Text>
       </View>
-      <Text style={logo.wordmark}>Rewlo</Text>
+      <Text style={logo.wordmark}>ReLo</Text>
     </View>
   );
 }
