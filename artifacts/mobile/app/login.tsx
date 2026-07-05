@@ -70,11 +70,9 @@ export default function LoginScreen() {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Image
-              source={require("@/assets/images/rewlo-logo-transparent.png")}
-              style={{ width: 180, height: 64, marginBottom: 8 }}
-              resizeMode="contain"
-            />
+            <Text style={{ fontSize: 48, fontWeight: "800", color: "#00E5CC", letterSpacing: -1, marginBottom: 4 }}>
+              RewLo
+            </Text>
             <Text style={styles.tagline}>Your Sports Fan Wallet</Text>
           </View>
 

@@ -62,13 +62,13 @@ const pb = StyleSheet.create({
 });
 
 // ── RewLo Logo ────────────────────────────────────────────────
+const LOGO_CYAN = "#00E5CC";
 function RewloLogo({ light = false }: { light?: boolean }) {
+  const color = light ? "#FFFFFF" : LOGO_CYAN;
   return (
-    <Image
-      source={require("@/assets/images/rewlo-logo-transparent.png")}
-      style={{ width: 180, height: 64, tintColor: light ? "#FFFFFF" : undefined }}
-      resizeMode="contain"
-    />
+    <Text style={{ fontSize: 48, fontWeight: "800", color, letterSpacing: -1 }}>
+      RewLo
+    </Text>
   );
 }
 
