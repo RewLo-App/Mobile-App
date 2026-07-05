@@ -14,7 +14,9 @@
       "backgroundColor": "#041120"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rewlo.app",
+      "buildNumber": "1"
     },
     "android": {
       "backgroundColor": "#041120"
