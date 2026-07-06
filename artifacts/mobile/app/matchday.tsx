@@ -340,11 +340,11 @@ export default function MatchdayScreen() {
           </LinearGradient>
         </Pressable>
 
-        {/* TrustPay earn note */}
+        {/* Rewlo earn note */}
         <View style={[styles.earnNote, { backgroundColor: "#F59E0B15", borderColor: "#F59E0B33" }]}>
           <Ionicons name="star-outline" size={16} color="#F59E0B" />
           <Text style={[styles.earnNoteText, { color: colors.mutedForeground }]}>
-            Earn <Text style={{ color: "#F59E0B", fontFamily: "Inter_600SemiBold" }}>2x TrustPay Points</Text> on all stadium purchases today
+            Earn <Text style={{ color: "#F59E0B", fontFamily: "Inter_600SemiBold" }}>2x Rewlo Points</Text> on all stadium purchases today
           </Text>
         </View>
       </ScrollView>

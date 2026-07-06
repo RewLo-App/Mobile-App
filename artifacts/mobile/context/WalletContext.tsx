@@ -53,7 +53,7 @@ interface WalletContextType {
   followedClubIds: string[];
   user: User | null;
   balance: number;
-  trustPayPoints: number;
+  rewloPoints: number;
   transactions: Transaction[];
   cards: VirtualCard[];
   offers: Offer[];
@@ -103,7 +103,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     id: "tx_003",
     type: "reward",
     amount: 0,
-    description: "500 TrustPay Points Earned",
+    description: "500 Rewlo Points Earned",
     merchant: "Nike Store",
     date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     status: "completed",
@@ -242,7 +242,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [balance, setBalance] = useState(0);
-  const [trustPayPoints, setTrustPayPoints] = useState(2350);
+  const [rewloPoints, setRewloPoints] = useState(2350);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [cards, setCards] = useState<VirtualCard[]>(MOCK_CARDS);
   const [offers, setOffers] = useState<Offer[]>(MOCK_OFFERS);
@@ -355,9 +355,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const redeemOffer = useCallback(
     (offerId: string) => {
       const offer = offers.find((o) => o.id === offerId);
-      if (!offer || offer.redeemed || trustPayPoints < offer.pointsCost) return;
+      if (!offer || offer.redeemed || rewloPoints < offer.pointsCost) return;
       setOffers((prev) => prev.map((o) => (o.id === offerId ? { ...o, redeemed: true } : o)));
-      setTrustPayPoints((prev) => prev - offer.pointsCost);
+      setRewloPoints((prev) => prev - offer.pointsCost);
       addTransaction({
         type: "reward",
         amount: 0,
@@ -366,7 +366,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         status: "completed",
       });
     },
-    [offers, trustPayPoints, addTransaction]
+    [offers, rewloPoints, addTransaction]
   );
 
   return (
@@ -377,7 +377,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         followedClubIds,
         user,
         balance,
-        trustPayPoints,
+        rewloPoints,
         transactions,
         cards,
         offers,

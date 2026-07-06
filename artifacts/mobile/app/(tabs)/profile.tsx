@@ -140,7 +140,7 @@ function SettingRow({ icon, label, value, onPress, showArrow = true, danger, tog
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, trustPayPoints, transactions, selectedClubId } = useWallet();
+  const { user, logout, rewloPoints, transactions, selectedClubId } = useWallet();
   const selectedClub = getClubById(selectedClubId);
 
   const [biometrics, setBiometrics] = useState(true);
@@ -209,7 +209,7 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           {[
             { label: "Member Since", value: user?.memberSince ?? "2024" },
-            { label: "TrustPay Pts", value: trustPayPoints.toLocaleString() },
+            { label: "Rewlo Pts", value: rewloPoints.toLocaleString() },
             { label: "Total Spend", value: `$${totalSpend.toFixed(0)}` },
           ].map((s) => (
             <View key={s.label} style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>

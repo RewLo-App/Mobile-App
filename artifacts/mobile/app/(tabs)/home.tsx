@@ -83,7 +83,7 @@ const LOYALTY_CLUBS = [
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, balance, trustPayPoints, transactions, selectedClubId } = useWallet();
+  const { user, balance, rewloPoints, transactions, selectedClubId } = useWallet();
   const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [sendModal, setSendModal] = useState(false);
@@ -192,7 +192,7 @@ export default function HomeScreen() {
             <View style={styles.pointsRow}>
               <Ionicons name="star" size={14} color="#F59E0B" />
               <Text style={styles.pointsText}>
-                {trustPayPoints.toLocaleString()} TrustPay Points
+                {rewloPoints.toLocaleString()} Rewlo Points
               </Text>
             </View>
 
@@ -310,8 +310,8 @@ export default function HomeScreen() {
           </View>
           <View style={[styles.loyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {LOYALTY_CLUBS.map((entry, idx) => {
-              const clubPts = Math.round(trustPayPoints * entry.ptsShare);
-              const maxPts = Math.round(trustPayPoints * 0.78);
+              const clubPts = Math.round(rewloPoints * entry.ptsShare);
+              const maxPts = Math.round(rewloPoints * 0.78);
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
               const isLast = idx === LOYALTY_CLUBS.length - 1;
               return (

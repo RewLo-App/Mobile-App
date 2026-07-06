@@ -103,7 +103,7 @@ function OfferCard({ item, onRedeem, canAfford }: OfferCardProps) {
           ]}
         >
           <Text style={[styles.redeemBtnText, { color: canAfford ? "#fff" : colors.mutedForeground }]}>
-            Redeem with TrustPay
+            Redeem with Rewlo
           </Text>
         </Pressable>
       )}
@@ -119,28 +119,28 @@ const LOYALTY_CLUBS = [
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { trustPayPoints, offers, redeemOffer, transactions } = useWallet();
+  const { rewloPoints, offers, redeemOffer, transactions } = useWallet();
   const [filter, setFilter] = useState<string>("All");
 
   const categories = ["All", "Sports", "Stadium", "Media", "Gaming"];
   const filtered = filter === "All" ? offers : offers.filter((o) => o.category === filter);
   const rewardTxs = transactions.filter((t) => t.type === "reward").slice(0, 3);
 
-  const currentTierIdx = getCurrentTierIndex(trustPayPoints);
+  const currentTierIdx = getCurrentTierIndex(rewloPoints);
   const currentMilestone = MILESTONES[currentTierIdx];
   const nextMilestone = MILESTONES[currentTierIdx + 1] ?? null;
   const prevPoints = currentMilestone.points;
   const nextPoints = nextMilestone?.points ?? currentMilestone.points;
   const progressPct = nextMilestone
-    ? Math.min(1, (trustPayPoints - prevPoints) / (nextPoints - prevPoints))
+    ? Math.min(1, (rewloPoints - prevPoints) / (nextPoints - prevPoints))
     : 1;
-  const ptsToNext = nextMilestone ? nextMilestone.points - trustPayPoints : 0;
+  const ptsToNext = nextMilestone ? nextMilestone.points - rewloPoints : 0;
 
   const handleRedeem = (id: string) => {
     const offer = offers.find((o) => o.id === id);
     if (!offer) return;
-    if (trustPayPoints < offer.pointsCost) {
-      Alert.alert("Not enough points", `You need ${offer.pointsCost.toLocaleString()} TrustPay points to redeem this offer.`);
+    if (rewloPoints < offer.pointsCost) {
+      Alert.alert("Not enough points", `You need ${offer.pointsCost.toLocaleString()} Rewlo points to redeem this offer.`);
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -173,8 +173,8 @@ export default function RewardsScreen() {
               style={styles.pointsHero}
             >
               <View>
-                <Text style={styles.pointsHeroLabel}>TrustPay Points</Text>
-                <Text style={styles.pointsHeroAmount}>{trustPayPoints.toLocaleString()}</Text>
+                <Text style={styles.pointsHeroLabel}>Rewlo Points</Text>
+                <Text style={styles.pointsHeroAmount}>{rewloPoints.toLocaleString()}</Text>
                 <Text style={styles.pointsHeroSub}>{currentMilestone.tier} Member · Earned this season</Text>
               </View>
               <MaterialCommunityIcons name="star-circle" size={64} color="rgba(255,255,255,0.25)" />
@@ -200,13 +200,13 @@ export default function RewardsScreen() {
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Club Loyalty</Text>
             <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
-              Your TrustPay points across all supported clubs
+              Your Rewlo points across all supported clubs
             </Text>
           </View>
           <View style={[styles.clubLoyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {LOYALTY_CLUBS.map((entry, idx) => {
-              const clubPts = Math.round(trustPayPoints * entry.ptsShare);
-              const maxPts = Math.round(trustPayPoints * 0.78);
+              const clubPts = Math.round(rewloPoints * entry.ptsShare);
+              const maxPts = Math.round(rewloPoints * 0.78);
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
               const isLast = idx === LOYALTY_CLUBS.length - 1;
               return (
@@ -253,7 +253,7 @@ export default function RewardsScreen() {
             })}
           </View>
 
-          {/* TrustPay Milestones */}
+          {/* Rewlo Milestones */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Loyalty Milestones</Text>
             <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
@@ -292,7 +292,7 @@ export default function RewardsScreen() {
               </View>
               <View style={styles.progressPtRow}>
                 <Text style={[styles.progressPtLabel, { color: colors.mutedForeground }]}>
-                  {trustPayPoints.toLocaleString()} pts
+                  {rewloPoints.toLocaleString()} pts
                 </Text>
                 <Text style={[styles.progressPtLabel, { color: colors.mutedForeground }]}>
                   {nextMilestone.points.toLocaleString()} pts
@@ -313,7 +313,7 @@ export default function RewardsScreen() {
           {/* All milestones ladder */}
           <View style={[styles.milestoneLadder, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {MILESTONES.map((m, i) => {
-              const isReached = trustPayPoints >= m.points;
+              const isReached = rewloPoints >= m.points;
               const isCurrent = i === currentTierIdx;
               const isLast = i === MILESTONES.length - 1;
               return (
@@ -412,7 +412,7 @@ export default function RewardsScreen() {
           <OfferCard
             item={item}
             onRedeem={handleRedeem}
-            canAfford={trustPayPoints >= item.pointsCost}
+            canAfford={rewloPoints >= item.pointsCost}
           />
         </View>
       )}
