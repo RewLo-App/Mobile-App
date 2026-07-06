@@ -22,16 +22,19 @@ function buildEmailHtml(name: string, teamName: string, gradStart: string, gradE
           <tr>
             <td style="padding:36px 40px;">
               <p style="color:#CBD5E1;font-size:16px;line-height:1.6;margin:0 0 16px;">Hi ${name},</p>
+              <p style="color:#CBD5E1;font-size:16px;line-height:1.6;margin:0 0 12px;">
+                You're joining the founding fan community — the first fans to earn real money on every
+                dollar they spend following <strong style="color:#fff;">${teamName}</strong>.
+              </p>
               <p style="color:#CBD5E1;font-size:16px;line-height:1.6;margin:0 0 24px;">
-                Your RewLo account is all set. You can now pay at the stadium, earn loyalty points with
-                <strong style="color:#fff;">${teamName}</strong>, and manage your fan finances — all in one place.
+                We're building this for fans exactly like you.
               </p>
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding:8px 0 24px;">
                     <a href="https://rewlo.io"
                        style="background:#00E5CC;color:#020D1E;padding:14px 36px;border-radius:12px;text-decoration:none;font-weight:700;font-size:15px;display:inline-block;">
-                      Open your wallet →
+                      rewlo.io →
                     </a>
                   </td>
                 </tr>
