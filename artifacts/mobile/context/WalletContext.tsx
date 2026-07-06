@@ -149,7 +149,7 @@ const MOCK_TRANSACTIONS: Transaction[] = [
 const MOCK_CARDS: VirtualCard[] = [
   {
     id: "card_001",
-    last4: "4821",
+    last4: "XXXX",
     brand: "visa",
     expiryMonth: 3,
     expiryYear: 28,
@@ -161,7 +161,7 @@ const MOCK_CARDS: VirtualCard[] = [
   },
   {
     id: "card_002",
-    last4: "7739",
+    last4: "XXXX",
     brand: "mastercard",
     expiryMonth: 11,
     expiryYear: 27,
@@ -241,7 +241,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [followedClubIds, setFollowedClubIds] = useState<string[]>([]);
   const [user, setUser] = useState<User | null>(null);
-  const [balance, setBalance] = useState(1284.5);
+  const [balance, setBalance] = useState(0);
   const [trustPayPoints, setTrustPayPoints] = useState(2350);
   const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
   const [cards, setCards] = useState<VirtualCard[]>(MOCK_CARDS);

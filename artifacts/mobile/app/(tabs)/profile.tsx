@@ -225,7 +225,6 @@ export default function ProfileScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Account</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SettingRow icon="person-outline" label="Personal Info" value={user?.phone} />
-          <SettingRow icon="wallet-outline" label="Bank Accounts" value="2 linked" />
           <SettingRow icon="football-outline" label="My Club" value={selectedClub.shortName} onPress={() => router.push("/club-selector")} />
           <SettingRow icon="qr-code-outline" label="My QR Code" />
 
