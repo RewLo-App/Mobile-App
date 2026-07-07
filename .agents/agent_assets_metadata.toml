@@ -35,3 +35,27 @@ id = "NdOcgoGCUVxKAX5z2i7YF"
 uri = "file://screenshots/appstore/04_send_money.png"
 type = "image"
 title = "Screen 4 · Send USDC"
+
+[[outputs]]
+id = "qTMbNIzh-SFbwfm6valO8"
+uri = "file://screenshots/appstore/01_club_picker_1284x2778.png"
+type = "image"
+title = "Screen 1 · Club Picker — 1284×2778px"
+
+[[outputs]]
+id = "GFP3SULg9MxibZzJoA8dr"
+uri = "file://screenshots/appstore/02_wallet_home_1284x2778.png"
+type = "image"
+title = "Screen 2 · Wallet Home — 1284×2778px"
+
+[[outputs]]
+id = "9A6mGlBwl9n_wJKowvzt3"
+uri = "file://screenshots/appstore/03_rewards_1284x2778.png"
+type = "image"
+title = "Screen 3 · Rewards — 1284×2778px"
+
+[[outputs]]
+id = "C2ojsZhWj7wvPiL7AzZHL"
+uri = "file://screenshots/appstore/04_send_money_1284x2778.png"
+type = "image"
+title = "Screen 4 · Send USDC — 1284×2778px"
