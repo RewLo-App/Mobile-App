@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "JkK9CuPLHMYcmTog_6tyG"
@@ -12,3 +11,27 @@ id = "7RRrzE3dJ4YqHLfEhKsh_"
 uri = "file://artifacts/mobile/assets/images/stadium_hero.png"
 type = "image"
 title = "generated_image"
+
+[[outputs]]
+id = "nfLwJxBlcbF55jDBTYUF_"
+uri = "file://screenshots/appstore/01_club_picker.png"
+type = "image"
+title = "Screen 1 · Club Picker"
+
+[[outputs]]
+id = "YcxAiPaRl4BUo6W0ufVi6"
+uri = "file://screenshots/appstore/02_wallet_home.png"
+type = "image"
+title = "Screen 2 · Wallet Home"
+
+[[outputs]]
+id = "-A5_1TLYMLm7OWmHI_WaH"
+uri = "file://screenshots/appstore/03_rewards.png"
+type = "image"
+title = "Screen 3 · Rewards"
+
+[[outputs]]
+id = "NdOcgoGCUVxKAX5z2i7YF"
+uri = "file://screenshots/appstore/04_send_money.png"
+type = "image"
+title = "Screen 4 · Send USDC"
