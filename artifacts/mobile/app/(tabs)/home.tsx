@@ -164,7 +164,7 @@ export default function HomeScreen() {
             style={styles.balanceCard}
           >
             <View style={styles.balanceTop}>
-              <Text style={styles.balanceLabel}>Total Balance</Text>
+              <Text style={styles.balanceBrand}>Rewlo</Text>
               <Pressable onPress={() => setBalanceVisible(!balanceVisible)}>
                 <Ionicons
                   name={balanceVisible ? "eye-outline" : "eye-off-outline"}
@@ -173,6 +173,7 @@ export default function HomeScreen() {
                 />
               </Pressable>
             </View>
+            <Text style={styles.balanceLabel}>Total Balance</Text>
             <Text style={styles.balanceAmount}>
               {balanceVisible ? `$${balance.toFixed(2)}` : "••••••"}
             </Text>
@@ -402,8 +403,9 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
   },
-  balanceTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  balanceLabel: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontFamily: "Inter_500Medium" },
+  balanceTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  balanceBrand: { color: "#00E5CC", fontSize: 20, fontWeight: "800" as const, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  balanceLabel: { color: "rgba(255,255,255,0.6)", fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.8 },
   balanceAmount: { color: "#FFFFFF", fontSize: 42, fontWeight: "800" as const, fontFamily: "Inter_700Bold", letterSpacing: -1, marginBottom: 2 },
   balanceCurrency: { color: "rgba(255,255,255,0.6)", fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 14 },
   pointsRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.2)", alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
