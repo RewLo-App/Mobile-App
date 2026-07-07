@@ -293,6 +293,9 @@ export default function HomeScreen() {
               <TransactionRow key={tx.id} item={tx} />
             ))}
           </View>
+          <Text style={[styles.illustrationNote, { color: colors.mutedForeground }]}>
+            * For illustration only
+          </Text>
         </View>
 
         {/* Club Loyalty Card */}
@@ -389,7 +392,8 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 13, fontFamily: "Inter_400Regular" },
   userName: { fontSize: 22, fontWeight: "700" as const, fontFamily: "Inter_700Bold" },
   headerActions: { flexDirection: "row", gap: 10, alignItems: "center" },
-  clubBadge: { borderRadius: 20, overflow: "hidden" },
+  clubBadge: { borderRadius: 24, overflow: "hidden", borderWidth: 2, borderColor: "rgba(0,229,204,0.7)" },
+  illustrationNote: { fontSize: 11, marginTop: 6, marginLeft: 2 },
   notifBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   balanceCard: {
     borderRadius: 22,
