@@ -147,17 +147,19 @@ export default function OnboardingScreen() {
     const followed = [primaryClubId!, ...(followsOther && otherClubId ? [otherClubId] : [])];
     await completeOnboarding(email, primaryClubId!, followed);
 
-    // Send welcome email via API server (non-blocking)
+    // Register user in DB + send welcome email (non-blocking)
     const club = primaryClubId ? getClubById(primaryClubId) : null;
     const apiBase = process.env.EXPO_PUBLIC_DOMAIN
       ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
       : "";
-    fetch(`${apiBase}/api/send-welcome-email`, {
+    fetch(`${apiBase}/api/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         email,
-        name: email.split("@")[0],
+        primaryClubId,
+        followedClubIds: followed,
+        zip,
         teamName: club?.name ?? "your team",
         gradientStart: club?.gradientStart ?? "#2563EB",
         gradientEnd: club?.gradientEnd ?? "#041828",
