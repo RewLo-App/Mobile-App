@@ -75,15 +75,10 @@ function TransactionRow({ item }: { item: Transaction }) {
   );
 }
 
-const LOYALTY_CLUBS = [
-  { club: getClubById("man-city"),      ptsShare: 0.78 },
-  { club: getClubById("stl-cardinals"), ptsShare: 0.22 },
-];
-
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, balance, rewloPoints, transactions, selectedClubId } = useWallet();
+  const { user, balance, rewloPoints, transactions, selectedClubId, followedClubIds } = useWallet();
   const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [sendModal, setSendModal] = useState(false);
@@ -153,7 +148,7 @@ export default function HomeScreen() {
                 onPress={() => router.push("/club-selector")}
                 style={styles.clubBadge}
               >
-                <ClubBadge club={selectedClub} size={36} />
+                <ClubBadge club={selectedClub} size={48} />
               </Pressable>
               <Pressable style={[styles.notifBtn, { backgroundColor: colors.card }]}>
                 <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
@@ -309,11 +304,14 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <View style={[styles.loyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {LOYALTY_CLUBS.map((entry, idx) => {
-              const clubPts = Math.round(rewloPoints * entry.ptsShare);
-              const maxPts = Math.round(rewloPoints * 0.78);
+            {(followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId]).map((clubId, idx, arr) => {
+              const club = getClubById(clubId);
+              const ptsShare = arr.length === 1 ? 1 : idx === 0 ? 0.78 : 0.22;
+              const clubPts = Math.round(rewloPoints * ptsShare);
+              const maxPts = Math.round(rewloPoints * (arr.length === 1 ? 1 : 0.78));
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
-              const isLast = idx === LOYALTY_CLUBS.length - 1;
+              const isLast = idx === arr.length - 1;
+              const entry = { club, ptsShare };
               return (
                 <View
                   key={entry.club.id}

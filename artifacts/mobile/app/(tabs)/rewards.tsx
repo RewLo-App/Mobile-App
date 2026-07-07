@@ -111,15 +111,10 @@ function OfferCard({ item, onRedeem, canAfford }: OfferCardProps) {
   );
 }
 
-const LOYALTY_CLUBS = [
-  { club: getClubById("man-city"),      ptsShare: 0.78 },
-  { club: getClubById("stl-cardinals"), ptsShare: 0.22 },
-];
-
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { rewloPoints, offers, redeemOffer, transactions } = useWallet();
+  const { rewloPoints, offers, redeemOffer, transactions, followedClubIds, selectedClubId } = useWallet();
   const [filter, setFilter] = useState<string>("All");
 
   const categories = ["All", "Sports", "Stadium", "Media", "Gaming"];
@@ -204,11 +199,14 @@ export default function RewardsScreen() {
             </Text>
           </View>
           <View style={[styles.clubLoyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {LOYALTY_CLUBS.map((entry, idx) => {
-              const clubPts = Math.round(rewloPoints * entry.ptsShare);
-              const maxPts = Math.round(rewloPoints * 0.78);
+            {(followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId]).map((clubId, idx, arr) => {
+              const club = getClubById(clubId);
+              const ptsShare = arr.length === 1 ? 1 : idx === 0 ? 0.78 : 0.22;
+              const clubPts = Math.round(rewloPoints * ptsShare);
+              const maxPts = Math.round(rewloPoints * (arr.length === 1 ? 1 : 0.78));
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
-              const isLast = idx === LOYALTY_CLUBS.length - 1;
+              const isLast = idx === arr.length - 1;
+              const entry = { club, ptsShare };
               return (
                 <View
                   key={entry.club.id}
