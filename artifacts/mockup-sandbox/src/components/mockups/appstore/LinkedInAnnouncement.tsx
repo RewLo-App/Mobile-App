@@ -44,7 +44,7 @@ export function LinkedInAnnouncement() {
 
         {/* Sub */}
         <div style={{ fontSize: 16, color: "rgba(255,255,255,0.65)", lineHeight: 1.6, marginBottom: 32, maxWidth: 400 }}>
-          Pay with USDC at the stadium, earn Rewlo Points on every transaction, and unlock exclusive fan rewards — all in one app.
+          Pay with Rewlo Wallet at the stadium, earn Rewlo Points on every transaction, and unlock exclusive fan rewards — all in one app.
         </div>
 
         {/* Feature pills */}
