@@ -36,9 +36,10 @@ export function LinkedInAnnouncement() {
         </div>
 
         {/* Headline */}
-        <div style={{ fontSize: 38, fontWeight: 800, color: "white", lineHeight: 1.15, letterSpacing: -0.5, marginBottom: 18 }}>
-          The Digital Wallet<br />
-          <span style={{ color: CYAN }}>Built for Sports Fans</span>
+        <div style={{ fontSize: 36, fontWeight: 800, color: "white", lineHeight: 1.2, letterSpacing: -0.5, marginBottom: 18 }}>
+          The Digital Wallet Built to<br />
+          <span style={{ color: CYAN }}>Reward Every Dollar</span><br />
+          Spent as a Fan
         </div>
 
         {/* Sub */}
