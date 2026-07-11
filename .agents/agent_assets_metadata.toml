@@ -65,3 +65,15 @@ id = "SRrPrB4avKFNFERSEcvrd"
 uri = "file://screenshots/appstore/rewlo_linkedin_announcement_1200x627.png"
 type = "image"
 title = "RewLo LinkedIn Announcement — 1200×627px"
+
+[[outputs]]
+id = "Fzc3tRJ89pGlSpR_RZsTS"
+uri = "file://screenshots/appstore/rewlo_loyalty_linkedin_1200x627.png"
+type = "image"
+title = "LinkedIn — 1200×627px"
+
+[[outputs]]
+id = "0UfwIpHkWzJae2k0YCpsp"
+uri = "file://screenshots/appstore/rewlo_loyalty_twitter_1200x675.png"
+type = "image"
+title = "X / Twitter — 1200×675px"
