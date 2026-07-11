@@ -114,7 +114,7 @@ export function LoyaltyAnnouncement() {
               <div style={{ position: "absolute", top: -20, right: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: 7, textTransform: "uppercase", letterSpacing: 1, marginBottom: 3 }}>Your Rewlo Points</div>
               <div style={{ display: "flex", alignItems: "flex-end", gap: 4, marginBottom: 6 }}>
-                <span style={{ fontSize: 36, fontWeight: 900, color: "white", letterSpacing: -1, lineHeight: 1 }}>0</span>
+                <span style={{ fontSize: 30, fontWeight: 900, color: "white", letterSpacing: -1, lineHeight: 1 }}>10,000</span>
                 <span style={{ color: GOLD, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>pts</span>
               </div>
               {/* Never expire badge */}
@@ -122,15 +122,16 @@ export function LoyaltyAnnouncement() {
                 <span style={{ fontSize: 9 }}>♾️</span>
                 <span style={{ color: CYAN, fontSize: 8, fontWeight: 700 }}>Points never expire</span>
               </div>
+              {/* Full progress bar — Legend tier reached */}
               <div style={{ height: 4, background: "rgba(255,255,255,0.15)", borderRadius: 2, marginBottom: 4, overflow: "hidden" }}>
-                <div style={{ width: "2%", height: "100%", background: GOLD, borderRadius: 2 }} />
+                <div style={{ width: "100%", height: "100%", background: `linear-gradient(90deg, ${GOLD}, ${CYAN})`, borderRadius: 2 }} />
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "2px 7px" }}>
-                  <span style={{ fontSize: 9 }}>🌱</span>
-                  <span style={{ color: GOLD, fontSize: 8, fontWeight: 600 }}>Fan Tier</span>
+                  <span style={{ fontSize: 9 }}>👑</span>
+                  <span style={{ color: GOLD, fontSize: 8, fontWeight: 600 }}>Legend Tier</span>
                 </div>
-                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 7 }}>500 to Supporter →</span>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 7 }}>Max tier reached 🎉</span>
               </div>
             </div>
 
@@ -141,8 +142,8 @@ export function LoyaltyAnnouncement() {
             </div>
             <div style={{ background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, overflow: "hidden", marginBottom: 10 }}>
               {[
-                { name: "Warriors", league: "NBA", code: "gs", logoBase: "nba", accent: "#1D428A", bar: CYAN },
-                { name: "49ers",    league: "NFL", code: "sf", logoBase: "nfl", accent: "#AA0000", bar: "#EF4444" },
+                { name: "Warriors", code: "gs", logoBase: "nba", accent: "#1D428A", bar: CYAN,      pts: "6,500", barPct: "65%" },
+                { name: "49ers",    code: "sf", logoBase: "nfl", accent: "#AA0000", bar: "#EF4444", pts: "3,500", barPct: "35%" },
               ].map((c, i) => (
                 <div key={c.name} style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 10px", borderBottom: i === 0 ? `1px solid ${BORDER}` : "none" }}>
                   <div style={{ width: 26, height: 26, borderRadius: 13, background: c.accent, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
@@ -151,10 +152,10 @@ export function LoyaltyAnnouncement() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                       <span style={{ color: "white", fontSize: 8, fontWeight: 600 }}>{c.name}</span>
-                      <span style={{ color: c.bar, fontSize: 8, fontWeight: 700 }}>0 pts</span>
+                      <span style={{ color: c.bar, fontSize: 8, fontWeight: 700 }}>{c.pts} pts</span>
                     </div>
                     <div style={{ height: 3, background: BORDER, borderRadius: 2, overflow: "hidden" }}>
-                      <div style={{ width: "1%", height: "100%", background: c.bar, borderRadius: 2 }} />
+                      <div style={{ width: c.barPct, height: "100%", background: c.bar, borderRadius: 2 }} />
                     </div>
                   </div>
                 </div>
@@ -165,14 +166,14 @@ export function LoyaltyAnnouncement() {
             <div style={{ color: "white", fontSize: 9, fontWeight: 700, marginBottom: 6 }}>Loyalty Milestones</div>
             <div style={{ display: "flex", gap: 6 }}>
               {[
-                { label: "Fan", pts: "0", icon: "🌱", active: true },
-                { label: "Supporter", pts: "500", icon: "⚡", active: false },
-                { label: "Loyal", pts: "2K", icon: "🏆", active: false },
-                { label: "Legend", pts: "10K", icon: "👑", active: false },
+                { label: "Fan",       pts: "0",   icon: "🌱", done: true,  active: false },
+                { label: "Supporter", pts: "500", icon: "⚡", done: true,  active: false },
+                { label: "Loyal",     pts: "2K",  icon: "🏆", done: true,  active: false },
+                { label: "Legend",    pts: "10K", icon: "👑", done: false, active: true  },
               ].map((m) => (
-                <div key={m.label} style={{ flex: 1, background: m.active ? `${BLUE}33` : CARD, border: `1px solid ${m.active ? BLUE + "55" : BORDER}`, borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
+                <div key={m.label} style={{ flex: 1, background: m.active ? `${GOLD}22` : m.done ? `${CYAN}0F` : CARD, border: `1px solid ${m.active ? GOLD + "66" : m.done ? CYAN + "33" : BORDER}`, borderRadius: 8, padding: "6px 4px", textAlign: "center" }}>
                   <div style={{ fontSize: 14, marginBottom: 2 }}>{m.icon}</div>
-                  <div style={{ color: m.active ? CYAN : "rgba(255,255,255,0.6)", fontSize: 7, fontWeight: 600 }}>{m.label}</div>
+                  <div style={{ color: m.active ? GOLD : m.done ? CYAN : "rgba(255,255,255,0.5)", fontSize: 7, fontWeight: 600 }}>{m.label}</div>
                   <div style={{ color: MUTED, fontSize: 6, marginTop: 1 }}>{m.pts} pts</div>
                 </div>
               ))}
