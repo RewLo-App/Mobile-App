@@ -195,8 +195,8 @@ export default function SmartPayScreen() {
       type: "payment",
       amount: -recommendation.effectivePrice,
       description: recommendation.action === "apply"
-        ? `Smart Pay · ${recommendation.pointsToApply.toLocaleString()} pts applied`
-        : `Smart Pay · points saved`,
+        ? `RewLo Pay · ${recommendation.pointsToApply.toLocaleString()} pts applied`
+        : `RewLo Pay · points saved`,
       merchant: selected.merchantName,
       status: "completed",
     });
@@ -217,7 +217,7 @@ export default function SmartPayScreen() {
           </Pressable>
           <View style={styles.headerTitleWrap}>
             <MaterialCommunityIcons name="robot-happy-outline" size={18} color="#00E5CC" />
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>Smart Pay</Text>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>RewLo Pay</Text>
           </View>
           <View style={{ width: 40 }} />
         </View>

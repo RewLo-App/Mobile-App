@@ -77,3 +77,9 @@ id = "0UfwIpHkWzJae2k0YCpsp"
 uri = "file://screenshots/appstore/rewlo_loyalty_twitter_1200x675.png"
 type = "image"
 title = "X / Twitter — 1200×675px"
+
+[[outputs]]
+id = "N6ASMVjLcuezRJO5xA3pU"
+uri = "file://screenshots/rewlo-pay-home.jpg"
+type = "image"
+title = "RewLo Pay — Home Screen (LinkedIn)"
