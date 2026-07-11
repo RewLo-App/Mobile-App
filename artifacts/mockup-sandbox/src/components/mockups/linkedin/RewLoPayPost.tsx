@@ -140,7 +140,7 @@ export function RewLoPayPost() {
               style={{
                 fontSize: 21,
                 lineHeight: 1.5,
-                color: "rgba(226,240,255,0.72)",
+                color: "rgba(237,246,255,0.92)",
                 margin: "0 0 40px",
                 maxWidth: 540,
               }}
@@ -195,7 +195,7 @@ export function RewLoPayPost() {
                     <div
                       style={{
                         fontSize: 16,
-                        color: "rgba(226,240,255,0.55)",
+                        color: "rgba(226,240,255,0.78)",
                       }}
                     >
                       {f.sub}
@@ -234,9 +234,7 @@ export function RewLoPayPost() {
               style={{
                 position: "relative",
                 height: 1000,
-                borderRadius: 44,
-                boxShadow:
-                  "0 40px 90px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04)",
+                filter: "drop-shadow(0 40px 60px rgba(0,0,0,0.6))",
               }}
             />
           </div>
