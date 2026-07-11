@@ -83,3 +83,9 @@ id = "N6ASMVjLcuezRJO5xA3pU"
 uri = "file://screenshots/rewlo-pay-home.jpg"
 type = "image"
 title = "RewLo Pay — Home Screen (LinkedIn)"
+
+[[outputs]]
+id = "bm58aKvQfHTIlRcO0BN12"
+uri = "file://screenshots/rewlo-pay-linkedin.jpg"
+type = "image"
+title = "RewLo Pay — LinkedIn Graphic (1200×1200)"

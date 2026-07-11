@@ -6,5 +6,6 @@ export const modules: ModuleMap = {
   "./components/mockups/appstore/LoyaltyAnnouncement.tsx": () => import("../components/mockups/appstore/LoyaltyAnnouncement.tsx"),
   "./components/mockups/appstore/Rewards.tsx": () => import("../components/mockups/appstore/Rewards.tsx"),
   "./components/mockups/appstore/SendMoney.tsx": () => import("../components/mockups/appstore/SendMoney.tsx"),
-  "./components/mockups/appstore/WalletHome.tsx": () => import("../components/mockups/appstore/WalletHome.tsx")
+  "./components/mockups/appstore/WalletHome.tsx": () => import("../components/mockups/appstore/WalletHome.tsx"),
+  "./components/mockups/linkedin/RewLoPayPost.tsx": () => import("../components/mockups/linkedin/RewLoPayPost.tsx")
 };
