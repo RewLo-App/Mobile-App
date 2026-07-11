@@ -64,6 +64,7 @@ interface WalletContextType {
   completeOnboarding: (email: string, primaryClubId: string, clubIds: string[]) => Promise<void>;
   sendMoney: (amount: number, recipient: string) => void;
   redeemOffer: (offerId: string) => void;
+  spendPoints: (points: number) => void;
   addTransaction: (tx: Omit<Transaction, "id" | "date">) => void;
 }
 
@@ -369,6 +370,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     [offers, rewloPoints, addTransaction]
   );
 
+  const spendPoints = useCallback((points: number) => {
+    if (points <= 0) return;
+    setRewloPoints((prev) => Math.max(0, prev - points));
+  }, []);
+
   return (
     <WalletContext.Provider
       value={{
@@ -388,6 +394,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         completeOnboarding,
         sendMoney,
         redeemOffer,
+        spendPoints,
         addTransaction,
       }}
     >
