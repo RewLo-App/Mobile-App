@@ -137,7 +137,7 @@ export default function LoginScreen() {
             <View style={styles.securityRow}>
               <Ionicons name="shield-checkmark-outline" size={14} color={colors.mutedForeground} />
               <Text style={[styles.securityText, { color: colors.mutedForeground }]}>
-                Secured by stablecoin rails · USDC powered
+                Bank-level encryption · Early access preview
               </Text>
             </View>
           </View>

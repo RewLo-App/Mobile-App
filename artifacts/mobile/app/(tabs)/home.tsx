@@ -48,7 +48,7 @@ function TransactionRow({ item }: { item: Transaction }) {
   const amountStr =
     item.type === "reward"
       ? "Points"
-      : `${item.amount >= 0 ? "+" : ""}${item.amount.toFixed(2)} USDC`;
+      : `${item.amount >= 0 ? "+" : "-"}$${Math.abs(item.amount).toFixed(2)}`;
 
   const amountColor =
     item.type === "reward"
@@ -177,7 +177,7 @@ export default function HomeScreen() {
             <Text style={styles.balanceAmount}>
               {balanceVisible ? `$${balance.toFixed(2)}` : "••••••"}
             </Text>
-            <Text style={styles.balanceCurrency}>USDC · Stablecoin</Text>
+            <Text style={styles.balanceCurrency}>RewLo Cash · Early Access Preview</Text>
             <View style={styles.pointsRow}>
               <Ionicons name="star" size={14} color="#F59E0B" />
               <Text style={styles.pointsText}>
@@ -361,7 +361,7 @@ export default function HomeScreen() {
           />
           <TextInput
             style={[styles.modalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-            placeholder="Amount (USDC)"
+            placeholder="Amount"
             placeholderTextColor={colors.mutedForeground}
             value={sendAmount}
             onChangeText={setSendAmount}

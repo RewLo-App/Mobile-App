@@ -43,9 +43,9 @@ const BONUS_EVENTS = [
 ];
 
 function mockStripePaymentIntentId(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let id = "pi_demo_";
-  for (let i = 0; i < 24; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let id = "RWL-";
+  for (let i = 0; i < 10; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return id;
 }
 
@@ -66,9 +66,9 @@ export function runAgentAnalysis(ctx: PurchaseContext): AgentRecommendation {
   if (!shouldApply) {
     reasoning = `Your point balance is low for this purchase. Save points for a Stadium or Sports merchant to get a better conversion rate.`;
   } else if (bonus && ctx.merchantCategory === "Stadium") {
-    reasoning = `${bonus.label} is active — each point is worth ${(effectiveValueCents / 100).toFixed(3)} USDC here, ${((multiplier - 1) * 100).toFixed(0)}% more than usual. This is the optimal time to redeem.`;
+    reasoning = `${bonus.label} is active — each point is worth $${(effectiveValueCents / 100).toFixed(3)} here, ${((multiplier - 1) * 100).toFixed(0)}% more than usual. This is the optimal time to redeem.`;
   } else if (ctx.merchantCategory === "Sports") {
-    reasoning = `Sports merchants offer the highest point-to-USDC rate at ${(effectiveValueCents / 100).toFixed(3)} USDC/pt. Applying points here maximises your return.`;
+    reasoning = `Sports merchants offer the highest point value at $${(effectiveValueCents / 100).toFixed(3)}/pt. Applying points here maximises your return.`;
   } else {
     reasoning = `Applying ${pointsToApply.toLocaleString()} points saves you $${savingsAmount.toFixed(2)} (${(savingsPct * 100).toFixed(0)}% off) at a strong redemption rate for this category.`;
   }
@@ -91,7 +91,7 @@ export function runAgentAnalysis(ctx: PurchaseContext): AgentRecommendation {
     {
       id: "val",
       label: "Calculating point value",
-      detail: `${ctx.merchantCategory}: ${(baseValueCents / 100).toFixed(3)} USDC/pt${bonus ? ` × ${multiplier}× ${bonus.label}` : ""}`,
+      detail: `${ctx.merchantCategory}: $${(baseValueCents / 100).toFixed(3)}/pt${bonus ? ` × ${multiplier}× ${bonus.label}` : ""}`,
       durationMs: 750,
     },
     {
@@ -112,8 +112,8 @@ export function runAgentAnalysis(ctx: PurchaseContext): AgentRecommendation {
     },
     {
       id: "stripe",
-      label: "Creating Stripe Payment Intent",
-      detail: `${piId} · Agentic Commerce Protocol`,
+      label: "Preparing secure checkout",
+      detail: `Ref ${piId} · RewLo Pay`,
       durationMs: 620,
     },
   ];

@@ -121,7 +121,7 @@ export default function ScanScreen() {
           </Animated.View>
           <Text style={[styles.successTitle, { color: colors.foreground }]}>Payment Sent!</Text>
           <Text style={[styles.successAmount, { color: "#22C55E" }]}>
-            ${payload.amount.toFixed(2)} USDC
+            ${payload.amount.toFixed(2)}
           </Text>
           <Text style={[styles.successTo, { color: colors.mutedForeground }]}>
             to {payload.merchant}
@@ -170,7 +170,7 @@ export default function ScanScreen() {
           <Text style={[styles.confirmAmount, { color: colors.foreground }]}>
             ${payload.amount.toFixed(2)}
           </Text>
-          <Text style={[styles.confirmCurrency, { color: colors.mutedForeground }]}>USDC</Text>
+          <Text style={[styles.confirmCurrency, { color: colors.mutedForeground }]}>RewLo Cash</Text>
 
           <View style={[styles.confirmDetails, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.confirmRow, { borderBottomColor: colors.border }]}>
@@ -179,12 +179,12 @@ export default function ScanScreen() {
             </View>
             <View style={[styles.confirmRow, { borderBottomColor: colors.border }]}>
               <Text style={[styles.confirmRowLabel, { color: colors.mutedForeground }]}>Your balance</Text>
-              <Text style={[styles.confirmRowValue, { color: colors.foreground }]}>${balance.toFixed(2)} USDC</Text>
+              <Text style={[styles.confirmRowValue, { color: colors.foreground }]}>${balance.toFixed(2)}</Text>
             </View>
             <View style={styles.confirmRow}>
               <Text style={[styles.confirmRowLabel, { color: colors.mutedForeground }]}>After payment</Text>
               <Text style={[styles.confirmRowValue, { color: insufficient ? colors.destructive : colors.success }]}>
-                ${(balance - payload.amount).toFixed(2)} USDC
+                ${(balance - payload.amount).toFixed(2)}
               </Text>
             </View>
           </View>
@@ -212,6 +212,9 @@ export default function ScanScreen() {
           <Pressable onPress={handleScanAgain} style={styles.cancelBtn}>
             <Text style={[styles.cancelBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
           </Pressable>
+          <Text style={{ fontSize: 12, textAlign: "center", marginTop: 4, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+            Early access preview — payments are simulated until launch.
+          </Text>
         </View>
       </View>
     );
@@ -235,7 +238,7 @@ export default function ScanScreen() {
           </Text>
           <TextInput
             style={[styles.webInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-            placeholder="Amount in USDC"
+            placeholder="Amount"
             placeholderTextColor={colors.mutedForeground}
             value={manualAmount}
             onChangeText={setManualAmount}
@@ -368,7 +371,7 @@ export default function ScanScreen() {
             <Text style={styles.manualLabel}>Enter amount manually</Text>
             <TextInput
               style={styles.manualInput}
-              placeholder="0.00 USDC"
+              placeholder="0.00"
               placeholderTextColor="rgba(255,255,255,0.4)"
               value={manualAmount}
               onChangeText={setManualAmount}

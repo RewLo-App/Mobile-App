@@ -236,7 +236,7 @@ export default function SmartPayScreen() {
             <View style={[styles.infoBanner, { backgroundColor: "rgba(0,229,204,0.08)", borderColor: "rgba(0,229,204,0.25)" }]}>
               <Ionicons name="sparkles" size={16} color="#00E5CC" />
               <Text style={[styles.infoBannerText, { color: colors.foreground }]}>
-                Pick a purchase. The agent evaluates point value, active bonuses, and merchant category — then pays via the Stripe Agentic Commerce Protocol.
+                Pick a purchase. The agent evaluates point value, active bonuses, and merchant category — then completes checkout for you.
               </Text>
             </View>
 
@@ -399,7 +399,7 @@ export default function SmartPayScreen() {
             <View style={[styles.stripeStrip, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
               <MaterialCommunityIcons name="shield-lock-outline" size={14} color={colors.primary} />
               <Text style={[styles.stripeStripText, { color: colors.mutedForeground }]} numberOfLines={1}>
-                Stripe Agentic Commerce · {recommendation.stripePaymentIntentId}
+                Secure checkout · Ref {recommendation.stripePaymentIntentId}
               </Text>
             </View>
 
@@ -423,6 +423,9 @@ export default function SmartPayScreen() {
             >
               <Text style={[styles.secondaryBtnText, { color: colors.mutedForeground }]}>Choose a different purchase</Text>
             </Pressable>
+            <Text style={{ fontSize: 12, textAlign: "center", marginTop: 4, fontFamily: "Inter_400Regular", color: colors.mutedForeground }}>
+              Early access preview — payments are simulated until launch.
+            </Text>
           </Animated.View>
         )}
 
@@ -447,14 +450,14 @@ export default function SmartPayScreen() {
 
             <View style={[styles.receiptCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.receiptRow}>
-                <Text style={[styles.receiptLabel, { color: colors.mutedForeground }]}>Payment Intent</Text>
+                <Text style={[styles.receiptLabel, { color: colors.mutedForeground }]}>Reference</Text>
                 <Text style={[styles.receiptValue, { color: colors.foreground }]} numberOfLines={1}>
                   {recommendation.stripePaymentIntentId}
                 </Text>
               </View>
               <View style={[styles.receiptRow, { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
-                <Text style={[styles.receiptLabel, { color: colors.mutedForeground }]}>Protocol</Text>
-                <Text style={[styles.receiptValue, { color: colors.foreground }]}>Stripe Agentic Commerce</Text>
+                <Text style={[styles.receiptLabel, { color: colors.mutedForeground }]}>Method</Text>
+                <Text style={[styles.receiptValue, { color: colors.foreground }]}>RewLo Pay</Text>
               </View>
               <View style={[styles.receiptRow, { borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
                 <Text style={[styles.receiptLabel, { color: colors.mutedForeground }]}>Status</Text>

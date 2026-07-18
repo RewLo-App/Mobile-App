@@ -64,7 +64,7 @@ function TxRow({ item, isLast }: { item: Transaction; isLast: boolean }) {
   const amountStr =
     item.type === "reward"
       ? "Points"
-      : `${item.amount >= 0 ? "+" : ""}${Math.abs(item.amount).toFixed(2)} USDC`;
+      : `${item.amount >= 0 ? "+" : "-"}$${Math.abs(item.amount).toFixed(2)}`;
   const amountColor =
     item.type === "reward" ? "#F59E0B" : item.amount >= 0 ? "#22C55E" : colors.foreground;
 
@@ -329,7 +329,7 @@ export default function ProfileScreen() {
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Preferences</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SettingRow icon="notifications-outline" label="Push Notifications" toggle toggled={notifications} onToggle={setNotifications} showArrow={false} />
-          <SettingRow icon="globe-outline" label="Currency" value="USDC" />
+          <SettingRow icon="globe-outline" label="Currency" value="USD" />
           <SettingRow icon="language-outline" label="Language" value="English" noBorder />
         </View>
       </View>
@@ -351,7 +351,7 @@ export default function ProfileScreen() {
       </View>
 
       <Text style={[styles.version, { color: colors.mutedForeground }]}>
-        RewLo v1.0.0 · Powered by USDC
+        RewLo v1.0.0 · Early Access Preview
       </Text>
     </ScrollView>
   );

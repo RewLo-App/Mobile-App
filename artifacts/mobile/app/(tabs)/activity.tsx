@@ -42,7 +42,7 @@ function TransactionItem({ item }: { item: Transaction }) {
   const amountStr =
     item.type === "reward"
       ? "Points"
-      : `${item.amount >= 0 ? "+" : ""}${Math.abs(item.amount).toFixed(2)} USDC`;
+      : `${item.amount >= 0 ? "+" : "-"}$${Math.abs(item.amount).toFixed(2)}`;
 
   const amountColor =
     item.type === "reward" ? "#F59E0B" : item.amount >= 0 ? "#22C55E" : colors.foreground;
