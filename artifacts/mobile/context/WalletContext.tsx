@@ -61,6 +61,7 @@ interface WalletContextType {
   setSelectedClub: (id: string) => void;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   completeOnboarding: (email: string, primaryClubId: string, clubIds: string[]) => Promise<void>;
   sendMoney: (amount: number, recipient: string) => void;
   redeemOffer: (offerId: string) => void;
@@ -327,6 +328,26 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const deleteAccount = useCallback(async () => {
+    await AsyncStorage.multiRemove([
+      "rewlo_auth",
+      "rewlo_onboarded",
+      "rewlo_email",
+      "rewlo_club",
+      "rewlo_followed_clubs",
+    ]);
+    setIsAuthenticated(false);
+    setIsOnboarded(false);
+    setUser(null);
+    setFollowedClubIds([]);
+    setBalance(0);
+    setRewloPoints(2350);
+    setTransactions(MOCK_TRANSACTIONS);
+    setCards(MOCK_CARDS);
+    setOffers(MOCK_OFFERS);
+    setSelectedClubId(DEFAULT_CLUB_ID);
+  }, []);
+
   const addTransaction = useCallback((tx: Omit<Transaction, "id" | "date">) => {
     const newTx: Transaction = {
       ...tx,
@@ -391,6 +412,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setSelectedClub,
         login,
         logout,
+        deleteAccount,
         completeOnboarding,
         sendMoney,
         redeemOffer,

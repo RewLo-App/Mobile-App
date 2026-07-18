@@ -245,7 +245,7 @@ export default function ScanScreen() {
             onPress={() => {
               const amount = parseFloat(manualAmount);
               if (!amount || isNaN(amount)) return;
-              setPayload({ merchant: "Demo Merchant", amount, ref: "DEMO-" + Date.now().toString().slice(-6) });
+              setPayload({ merchant: "Manual Entry", amount, ref: "MANUAL-" + Date.now().toString().slice(-6) });
               setPhase("confirming");
             }}
             style={[styles.webBtn, { backgroundColor: colors.primary }]}

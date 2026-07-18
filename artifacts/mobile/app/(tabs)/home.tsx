@@ -178,13 +178,6 @@ export default function HomeScreen() {
               {balanceVisible ? `$${balance.toFixed(2)}` : "••••••"}
             </Text>
             <Text style={styles.balanceCurrency}>USDC · Stablecoin</Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 }}>
-              <Ionicons name="information-circle-outline" size={12} color="rgba(255,255,255,0.6)" />
-              <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>
-                Demo mode — balances are for illustration only
-              </Text>
-            </View>
-
             <View style={styles.pointsRow}>
               <Ionicons name="star" size={14} color="#F59E0B" />
               <Text style={styles.pointsText}>

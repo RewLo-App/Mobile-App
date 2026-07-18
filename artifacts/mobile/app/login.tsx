@@ -47,12 +47,6 @@ export default function LoginScreen() {
     }
   };
 
-  const fillDemo = () => {
-    setEmail("alex@rewlo.io");
-    setPassword("password123");
-    setError("");
-  };
-
   return (
     <LinearGradient colors={["#020D1E", "#041828", "#062040"]} style={styles.gradient}>
       <KeyboardAvoidingView
@@ -135,12 +129,6 @@ export default function LoginScreen() {
               ) : (
                 <Text style={styles.loginBtnText}>Sign In</Text>
               )}
-            </Pressable>
-
-            <Pressable onPress={fillDemo} style={styles.demoBtn}>
-              <Text style={[styles.demoBtnText, { color: colors.mutedForeground }]}>
-                Use demo account
-              </Text>
             </Pressable>
           </View>
 
@@ -248,14 +236,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700" as const,
     fontFamily: "Inter_700Bold",
-  },
-  demoBtn: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
-  demoBtnText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
   },
   footer: {
     alignItems: "center",

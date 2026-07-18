@@ -423,10 +423,6 @@ export default function SmartPayScreen() {
             >
               <Text style={[styles.secondaryBtnText, { color: colors.mutedForeground }]}>Choose a different purchase</Text>
             </Pressable>
-
-            <Text style={[styles.demoNote, { color: colors.mutedForeground }]}>
-              Demo mode — no real charge is made.
-            </Text>
           </Animated.View>
         )}
 
@@ -553,7 +549,6 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_700Bold" },
   secondaryBtn: { alignItems: "center", paddingVertical: 12 },
   secondaryBtnText: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  demoNote: { fontSize: 12, textAlign: "center", marginTop: 8, fontFamily: "Inter_400Regular" },
 
   doneWrap: { alignItems: "center", paddingTop: 20 },
   doneCircle: { width: 108, height: 108, borderRadius: 54, alignItems: "center", justifyContent: "center", marginBottom: 20 },

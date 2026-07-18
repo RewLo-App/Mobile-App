@@ -6,6 +6,7 @@ import React, { useRef, useState } from "react";
 import {
   Alert,
   Animated,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -140,7 +141,7 @@ function SettingRow({ icon, label, value, onPress, showArrow = true, danger, tog
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, rewloPoints, transactions, selectedClubId } = useWallet();
+  const { user, logout, deleteAccount, rewloPoints, transactions, selectedClubId } = useWallet();
   const selectedClub = getClubById(selectedClubId);
 
   const [biometrics, setBiometrics] = useState(true);
@@ -163,6 +164,24 @@ export default function ProfileScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: async () => { await logout(); router.replace("/login"); } },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This permanently deletes your account and all associated data from this device. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteAccount();
+            router.replace("/onboarding");
+          },
+        },
+      ]
+    );
   };
 
   const totalSpend = Math.abs(
@@ -301,10 +320,7 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Security</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow icon="finger-print-outline" label="Biometrics" toggle toggled={biometrics} onToggle={setBiometrics} showArrow={false} />
-          <SettingRow icon="lock-closed-outline" label="Change PIN" />
-          <SettingRow icon="shield-checkmark-outline" label="Two-Factor Auth" value="On" />
-          <SettingRow icon="key-outline" label="Linked Devices" value="2 devices" noBorder />
+          <SettingRow icon="finger-print-outline" label="Biometrics" toggle toggled={biometrics} onToggle={setBiometrics} showArrow={false} noBorder />
         </View>
       </View>
 
@@ -322,16 +338,15 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Support</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow icon="help-circle-outline" label="Help Centre" />
-          <SettingRow icon="chatbubble-outline" label="Contact Us" />
-          <SettingRow icon="document-text-outline" label="Terms & Privacy" noBorder />
+          <SettingRow icon="chatbubble-outline" label="Contact Us" onPress={() => Linking.openURL("mailto:support@rewlo.io")} noBorder />
         </View>
       </View>
 
       {/* Logout */}
       <View style={[styles.section, { marginTop: 22 }]}>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow icon="log-out-outline" label="Sign Out" onPress={handleLogout} showArrow={false} danger noBorder />
+          <SettingRow icon="log-out-outline" label="Sign Out" onPress={handleLogout} showArrow={false} danger />
+          <SettingRow icon="trash-outline" label="Delete Account" onPress={handleDeleteAccount} showArrow={false} danger noBorder />
         </View>
       </View>
 

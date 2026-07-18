@@ -256,12 +256,6 @@ function Step1({
         <RewloLogo />
         <Text style={s.stepTitle}>Pick your team</Text>
         <Text style={s.stepSub}>Select the club you root for most</Text>
-
-        {/* Coming soon announcement */}
-        <View style={s.comingSoonBadge}>
-          <View style={s.comingSoonDot} />
-          <Text style={s.comingSoonText}>Coming Soon · For representation purposes only</Text>
-        </View>
       </View>
 
       {/* League tabs */}
@@ -680,30 +674,6 @@ const s = StyleSheet.create({
   logoArea: { alignItems: "center", paddingHorizontal: 24, gap: 6, marginBottom: 16 },
   stepTitle: { fontSize: 22, fontWeight: "700" as const, color: WHITE, textAlign: "center" as const },
   stepSub: { fontSize: 14, color: MUTED, textAlign: "center" as const },
-  comingSoonBadge: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 6,
-    marginTop: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,229,204,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(0,229,204,0.30)",
-  },
-  comingSoonDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#00E5CC",
-  },
-  comingSoonText: {
-    fontSize: 12,
-    color: "#00E5CC",
-    fontWeight: "600" as const,
-    letterSpacing: 0.2,
-  },
   tabsWrap: { height: 52, flexShrink: 0 },
   tabs: { paddingHorizontal: 16, gap: 8, alignItems: "center" },
   tab: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
