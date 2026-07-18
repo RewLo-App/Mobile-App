@@ -1,15 +1,15 @@
 {
   "expo": {
     "name": "RewLo",
-    "slug": "mobile",
+    "slug": "rewlo",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "icon": "./assets/images/rewlo-appicon.png",
+    "scheme": "rewlo",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/rewlo-appicon.png",
       "resizeMode": "contain",
       "backgroundColor": "#041120"
     },
@@ -31,8 +31,7 @@
           "origin": "https://replit.com/"
         }
       ],
-      "expo-font",
-      "expo-web-browser"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true,

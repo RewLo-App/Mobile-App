@@ -13,7 +13,7 @@ function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="home">
-        <Icon sf={{ default: "wallet", selected: "wallet.fill" }} />
+        <Icon sf={{ default: "wallet.pass", selected: "wallet.pass.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="cards">

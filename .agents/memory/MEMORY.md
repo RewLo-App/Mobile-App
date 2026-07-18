@@ -1,1 +1,0 @@
-- [Mobile typecheck baseline](mobile-typecheck-baseline.md) — a pre-existing SF Symbol error in the mobile tabs layout is expected; not a regression.
