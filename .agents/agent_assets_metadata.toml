@@ -95,3 +95,9 @@ id = "bm58aKvQfHTIlRcO0BN12"
 uri = "file://screenshots/rewlo-pay-linkedin.jpg"
 type = "image"
 title = "RewLo Pay — LinkedIn Graphic (1200×1200)"
+
+[[outputs]]
+id = "Si-XGr8zUn1JheRmbGTnd"
+uri = "file://RewLo_Technical_Documentation.pdf"
+type = "pdf"
+title = "RewLo — Technical Documentation"
