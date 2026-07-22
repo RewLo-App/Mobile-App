@@ -1,231 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
-import {
-  FlatList,
-  Platform,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import { walletRequest } from "@/utils/walletApi";
 
-type FilterType = "All" | "Sent" | "Received" | "Rewards";
+type TxType="all"|"send"|"receive"|"top_up"|"reward_earned"|"reward_redeemed"|"merchant_payment"|"mint"|"burn";
+type Status="all"|"pending"|"completed"|"failed"|"reversed";
+type LedgerItem={id:string;type:Exclude<TxType,"all">;status:Exclude<Status,"all">;amountCents:number;pointsDelta:number;description:string;reference:string;externalTransactionId:string|null;merchant:string|null;createdAt:string};
+type Page={items:LedgerItem[];pagination:{page:number;hasMore:boolean;total:number}};
+const FILTERS:Array<{key:TxType;label:string}>=[{key:"all",label:"All"},{key:"send",label:"Sent"},{key:"receive",label:"Received"},{key:"top_up",label:"Top Up"},{key:"reward_earned",label:"Rewards +"},{key:"reward_redeemed",label:"Rewards −"},{key:"merchant_payment",label:"Payments"},{key:"mint",label:"Mint"},{key:"burn",label:"Burn"}];
+const ICONS:Record<string,{name:keyof typeof Ionicons.glyphMap;color:string}>={send:{name:"arrow-up-circle",color:"#EF4444"},receive:{name:"arrow-down-circle",color:"#22C55E"},top_up:{name:"add-circle",color:"#22C55E"},reward_earned:{name:"star",color:"#F59E0B"},reward_redeemed:{name:"gift",color:"#F59E0B"},merchant_payment:{name:"card",color:"#3B82F6"},mint:{name:"logo-usd",color:"#00E5CC"},burn:{name:"flame",color:"#F97316"}};
+const STATUS_COLORS:Record<string,string>={completed:"#22C55E",pending:"#F59E0B",failed:"#EF4444",reversed:"#94A3B8"};
 
-const ICON_MAP: Record<string, { name: keyof typeof Ionicons.glyphMap; color: string }> = {
-  send: { name: "arrow-up-circle", color: "#EF4444" },
-  receive: { name: "arrow-down-circle", color: "#22C55E" },
-  payment: { name: "card", color: "#3B82F6" },
-  reward: { name: "star", color: "#F59E0B" },
-  topup: { name: "add-circle", color: "#22C55E" },
-};
-
-function TransactionItem({ item }: { item: Transaction }) {
-  const colors = useColors();
-  const icon = ICON_MAP[item.type] ?? { name: "ellipse" as keyof typeof Ionicons.glyphMap, color: colors.mutedForeground };
-
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = (now.getTime() - d.getTime()) / 1000;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 86400 * 2) return "Yesterday";
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  };
-
-  const amountStr =
-    item.type === "reward"
-      ? "Points"
-      : `${item.amount >= 0 ? "+" : "-"}$${Math.abs(item.amount).toFixed(2)}`;
-
-  const amountColor =
-    item.type === "reward" ? "#F59E0B" : item.amount >= 0 ? "#22C55E" : colors.foreground;
-
-  return (
-    <View style={[styles.txItem, { borderBottomColor: colors.border }]}>
-      <View style={[styles.txIcon, { backgroundColor: `${icon.color}22` }]}>
-        <Ionicons name={icon.name} size={24} color={icon.color} />
-      </View>
-      <View style={styles.txBody}>
-        <View style={styles.txRow}>
-          <Text style={[styles.txDesc, { color: colors.foreground }]} numberOfLines={1}>
-            {item.description}
-          </Text>
-          <Text style={[styles.txAmount, { color: amountColor }]}>{amountStr}</Text>
-        </View>
-        <View style={styles.txMeta}>
-          {item.merchant ? (
-            <Text style={[styles.txMetaText, { color: colors.mutedForeground }]}>
-              {item.merchant}
-            </Text>
-          ) : null}
-          <Text style={[styles.txDate, { color: colors.mutedForeground }]}>
-            {formatDate(item.date)}
-          </Text>
-          {item.status === "pending" && (
-            <View style={[styles.pendingBadge, { backgroundColor: "#F59E0B22" }]}>
-              <Text style={[styles.pendingText, { color: "#F59E0B" }]}>Pending</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function groupByDate(transactions: Transaction[]) {
-  const groups: { title: string; data: Transaction[] }[] = [];
-  const map = new Map<string, Transaction[]>();
-
-  transactions.forEach((tx) => {
-    const d = new Date(tx.date);
-    const now = new Date();
-    const diff = (now.getTime() - d.getTime()) / 86400000;
-    let label: string;
-    if (diff < 1) label = "Today";
-    else if (diff < 2) label = "Yesterday";
-    else label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-    if (!map.has(label)) map.set(label, []);
-    map.get(label)!.push(tx);
-  });
-
-  map.forEach((data, title) => groups.push({ title, data }));
-  return groups;
-}
-
-export default function ActivityScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const { transactions } = useWallet();
-  const [filter, setFilter] = useState<FilterType>("All");
-  const [refreshing, setRefreshing] = useState(false);
-
-  const topPad = Platform.OS === "web" ? 67 : insets.top;
-
-  const filtered = transactions.filter((tx) => {
-    if (filter === "All") return true;
-    if (filter === "Sent") return tx.type === "send" || tx.type === "payment";
-    if (filter === "Received") return tx.type === "receive" || tx.type === "topup";
-    if (filter === "Rewards") return tx.type === "reward";
-    return true;
-  });
-
-  const groups = groupByDate(filtered);
-
-  const flatData: Array<{ type: "header"; title: string } | { type: "item"; tx: Transaction }> = [];
-  groups.forEach((g) => {
-    flatData.push({ type: "header", title: g.title });
-    g.data.forEach((tx) => flatData.push({ type: "item", tx }));
-  });
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setTimeout(() => setRefreshing(false), 800);
-  };
-
-  const filters: FilterType[] = ["All", "Sent", "Received", "Rewards"];
-
-  return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 16 }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Activity</Text>
-        <Pressable style={[styles.filterIcon, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Ionicons name="options-outline" size={20} color={colors.foreground} />
-        </Pressable>
-      </View>
-
-      {/* Filter Tabs */}
-      <View style={[styles.filterRow, { borderBottomColor: colors.border }]}>
-        {filters.map((f) => (
-          <Pressable
-            key={f}
-            onPress={() => { setFilter(f); Haptics.selectionAsync(); }}
-            style={styles.filterTab}
-          >
-            <Text
-              style={[
-                styles.filterTabText,
-                { color: filter === f ? colors.primary : colors.mutedForeground },
-              ]}
-            >
-              {f}
-            </Text>
-            {filter === f && (
-              <View style={[styles.filterUnderline, { backgroundColor: colors.primary }]} />
-            )}
-          </Pressable>
-        ))}
-      </View>
-
-      <FlatList
-        data={flatData}
-        keyExtractor={(_, i) => i.toString()}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: Platform.OS === "web" ? 100 : insets.bottom + 100 }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Ionicons name="receipt-outline" size={48} color={colors.border} />
-            <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              No transactions yet
-            </Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          if (item.type === "header") {
-            return (
-              <Text style={[styles.dateHeader, { color: colors.mutedForeground }]}>
-                {item.title}
-              </Text>
-            );
-          }
-          return (
-            <View style={[styles.txContainer, { backgroundColor: colors.card }]}>
-              <TransactionItem item={item.tx} />
-            </View>
-          );
-        }}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingBottom: 16 },
-  headerTitle: { fontSize: 28, fontWeight: "800" as const, fontFamily: "Inter_700Bold" },
-  filterIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  filterRow: { flexDirection: "row", paddingHorizontal: 20, borderBottomWidth: StyleSheet.hairlineWidth, marginBottom: 8 },
-  filterTab: { flex: 1, alignItems: "center", paddingBottom: 12, position: "relative" },
-  filterTabText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  filterUnderline: { position: "absolute", bottom: 0, left: "10%", right: "10%", height: 2, borderRadius: 1 },
-  txContainer: { marginHorizontal: 20, marginBottom: 1, borderRadius: 0 },
-  txItem: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 15, borderBottomWidth: StyleSheet.hairlineWidth },
-  txIcon: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center", marginRight: 14 },
-  txBody: { flex: 1 },
-  txRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  txDesc: { fontSize: 15, fontFamily: "Inter_500Medium", flex: 1, marginRight: 10 },
-  txAmount: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  txMeta: { flexDirection: "row", gap: 8, alignItems: "center" },
-  txMetaText: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  txDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  pendingBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  pendingText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
-  dateHeader: { paddingHorizontal: 20, paddingTop: 18, paddingBottom: 8, fontSize: 13, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
-  empty: { alignItems: "center", justifyContent: "center", paddingTop: 80, gap: 12 },
-  emptyText: { fontSize: 16, fontFamily: "Inter_500Medium" },
-});
+export default function ActivityScreen(){const colors=useColors(),insets=useSafeAreaInsets();const[items,setItems]=useState<LedgerItem[]>([]),[filter,setFilter]=useState<TxType>("all"),[status,setStatus]=useState<Status>("all"),[search,setSearch]=useState(""),[debounced,setDebounced]=useState(""),[page,setPage]=useState(1),[hasMore,setHasMore]=useState(false),[loading,setLoading]=useState(true),[refreshing,setRefreshing]=useState(false),[error,setError]=useState("");
+  useEffect(()=>{const t=setTimeout(()=>setDebounced(search.trim()),300);return()=>clearTimeout(t)},[search]);
+  const load=useCallback(async(nextPage:number,append=false)=>{if(nextPage===1)setLoading(true);setError("");try{const q=new URLSearchParams({page:String(nextPage),pageSize:"20",type:filter,status,search:debounced});const data=await walletRequest<Page>(`/api/wallet/transactions?${q}`);setItems(prev=>append?[...prev,...data.items]:data.items);setPage(nextPage);setHasMore(data.pagination.hasMore)}catch(e){setError(e instanceof Error?e.message:"Could not load transactions")}finally{setLoading(false);setRefreshing(false)}},[filter,status,debounced]);
+  useEffect(()=>{load(1)},[load]);
+  const refresh=()=>{setRefreshing(true);Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);load(1)};
+  const topPad=Platform.OS==="web"?67:insets.top;
+  return <View style={[s.root,{backgroundColor:colors.background}]}><View style={[s.header,{paddingTop:topPad+16}]}><Text style={[s.headerTitle,{color:colors.foreground}]}>Activity</Text><View style={[s.statusWrap,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name="options-outline" size={16} color={colors.foreground}/><Text style={[s.statusText,{color:colors.foreground}]}>{status==="all"?"All statuses":status}</Text></View></View>
+    <View style={[s.search,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name="search" size={19} color={colors.mutedForeground}/><TextInput value={search} onChangeText={setSearch} placeholder="Search transactions or reference" placeholderTextColor={colors.mutedForeground} style={[s.searchInput,{color:colors.foreground}]}/>{search?<Pressable onPress={()=>setSearch("")}><Ionicons name="close-circle" size={18} color={colors.mutedForeground}/></Pressable>:null}</View>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filters}>{FILTERS.map(f=><Pressable key={f.key} onPress={()=>{setFilter(f.key);Haptics.selectionAsync()}} style={[s.filter,{backgroundColor:filter===f.key?colors.primary:colors.card,borderColor:filter===f.key?colors.primary:colors.border}]}><Text style={[s.filterText,{color:filter===f.key?"#fff":colors.mutedForeground}]}>{f.label}</Text></Pressable>)}</ScrollView>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.statuses}>{(["all","pending","completed","failed","reversed"] as Status[]).map(x=><Pressable key={x} onPress={()=>setStatus(x)} style={[s.statusChip,{borderColor:status===x?(x==="all"?colors.primary:STATUS_COLORS[x]):colors.border}]}><View style={[s.dot,{backgroundColor:x==="all"?colors.primary:STATUS_COLORS[x]}]}/><Text style={[s.statusChipText,{color:status===x?colors.foreground:colors.mutedForeground}]}>{x==="all"?"All":x[0].toUpperCase()+x.slice(1)}</Text></Pressable>)}</ScrollView>
+    {loading?<ActivityIndicator color={colors.primary} style={{marginTop:70}}/>:<FlatList data={items} keyExtractor={x=>x.id} renderItem={({item})=><TransactionRow item={item}/>} onEndReached={()=>{if(hasMore&&!loading)load(page+1,true)}} onEndReachedThreshold={0.35} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary}/>} contentContainerStyle={{paddingBottom:Platform.OS==="web"?100:insets.bottom+100}} ListFooterComponent={hasMore?<ActivityIndicator color={colors.primary} style={{margin:20}}/>:null} ListEmptyComponent={<View style={s.empty}><Ionicons name="receipt-outline" size={48} color={colors.border}/><Text style={{color:colors.mutedForeground}}>{error||"No matching transactions"}</Text></View>}/>}</View>}
+function TransactionRow({item}:{item:LedgerItem}){const colors=useColors(),icon=ICONS[item.type]??{name:"ellipse" as const,color:colors.mutedForeground};const points=item.type.startsWith("reward_");const amount=points?`${item.pointsDelta>0?"+":""}${item.pointsDelta.toLocaleString()} pts`:`${item.amountCents>=0?"+":"-"}$${Math.abs(item.amountCents/100).toFixed(2)}`;return <View style={[s.tx,{backgroundColor:colors.card,borderBottomColor:colors.border}]}><View style={[s.icon,{backgroundColor:`${icon.color}22`}]}><Ionicons name={icon.name} size={24} color={icon.color}/></View><View style={{flex:1}}><View style={s.txTop}><Text numberOfLines={1} style={[s.desc,{color:colors.foreground}]}>{item.description}</Text><Text style={[s.amount,{color:points?"#F59E0B":item.amountCents>=0?"#22C55E":colors.foreground}]}>{amount}</Text></View><View style={s.meta}><Text style={[s.metaText,{color:colors.mutedForeground}]}>{new Date(item.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</Text><View style={[s.badge,{backgroundColor:`${STATUS_COLORS[item.status]}22`}]}><Text style={[s.badgeText,{color:STATUS_COLORS[item.status]}]}>{item.status}</Text></View></View><Text numberOfLines={1} style={[s.reference,{color:colors.mutedForeground}]}>Ref {item.reference}</Text></View></View>}
+const s=StyleSheet.create({root:{flex:1},header:{paddingHorizontal:20,paddingBottom:14,flexDirection:"row",alignItems:"center",justifyContent:"space-between"},headerTitle:{fontSize:28,fontFamily:"Inter_700Bold"},statusWrap:{height:38,borderRadius:19,borderWidth:1,paddingHorizontal:12,flexDirection:"row",alignItems:"center",gap:6},statusText:{fontSize:11,fontFamily:"Inter_500Medium",textTransform:"capitalize"},search:{height:50,marginHorizontal:20,borderRadius:15,borderWidth:1,paddingHorizontal:14,flexDirection:"row",alignItems:"center",gap:9},searchInput:{flex:1,fontSize:14},filters:{paddingHorizontal:20,paddingVertical:12,gap:8},filter:{paddingHorizontal:14,height:34,borderRadius:17,borderWidth:1,alignItems:"center",justifyContent:"center"},filterText:{fontSize:12,fontFamily:"Inter_600SemiBold"},statuses:{paddingHorizontal:20,paddingBottom:10,gap:8},statusChip:{height:29,paddingHorizontal:10,borderRadius:15,borderWidth:1,flexDirection:"row",alignItems:"center",gap:5},dot:{width:6,height:6,borderRadius:3},statusChipText:{fontSize:11,fontFamily:"Inter_500Medium"},tx:{marginHorizontal:20,padding:15,flexDirection:"row",borderBottomWidth:StyleSheet.hairlineWidth},icon:{width:46,height:46,borderRadius:23,alignItems:"center",justifyContent:"center",marginRight:13},txTop:{flexDirection:"row",alignItems:"center",gap:8},desc:{flex:1,fontSize:14,fontFamily:"Inter_500Medium"},amount:{fontSize:14,fontFamily:"Inter_600SemiBold"},meta:{flexDirection:"row",alignItems:"center",gap:8,marginTop:5},metaText:{fontSize:11},badge:{paddingHorizontal:7,paddingVertical:2,borderRadius:9},badgeText:{fontSize:10,fontFamily:"Inter_600SemiBold",textTransform:"capitalize"},reference:{fontSize:10,marginTop:5},empty:{alignItems:"center",paddingTop:75,gap:12}});

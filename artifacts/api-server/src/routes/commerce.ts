@@ -49,6 +49,51 @@ router.get("/wallet/summary", async (req, res) => {
   }
   res.json(u);
 });
+
+router.get("/wallet/transactions", async (req, res) => {
+  const id = actor(req.header("x-rewlo-user-id"));
+  if (!id) { res.status(401).json({ error: "User identity is required" }); return; }
+  const page = Math.max(1, Number.parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const pageSize = Math.min(50, Math.max(5, Number.parseInt(String(req.query.pageSize ?? "20"), 10) || 20));
+  const filter = String(req.query.type ?? "all").toLowerCase();
+  const status = String(req.query.status ?? "all").toLowerCase();
+  const search = String(req.query.search ?? "").trim();
+  const allowedTypes = new Set(["all", "send", "receive", "top_up", "reward_earned", "reward_redeemed", "merchant_payment", "mint", "burn"]);
+  const allowedStatuses = new Set(["all", "pending", "completed", "failed", "reversed"]);
+  if (!allowedTypes.has(filter) || !allowedStatuses.has(status)) { res.status(400).json({ error: "Invalid transaction filter" }); return; }
+  const rows = await db.execute(sql`
+    WITH unified AS (
+      SELECT 'wallet-' || wt.id AS id,
+        CASE WHEN wt.type='redeem' THEN 'burn' WHEN wt.type='reward' THEN 'reward_earned' ELSE wt.type::text END AS type,
+        wt.status::text AS status,
+        wt.amount_cents AS amount_cents, wt.reward_points_delta AS points_delta,
+        wt.description, wt.reference, wt.external_transaction_id, wt.created_at,
+        m.merchant_name AS merchant
+      FROM wallet_transactions wt LEFT JOIN merchants m ON m.id=wt.merchant_id
+      WHERE wt.user_id=${id}
+        AND wt.type IN ('send','receive','top_up','reward','redeem','merchant_payment','mint','burn')
+        AND NOT (wt.type='redeem' AND EXISTS (SELECT 1 FROM offer_redemptions r WHERE r.user_id=wt.user_id AND r.reference=wt.reference))
+      UNION ALL
+      SELECT 'reward-' || rt.id, CASE WHEN rt.points_delta >= 0 THEN 'reward_earned' ELSE 'reward_redeemed' END,
+        'completed', 0, rt.points_delta, rt.reason, rt.reference, NULL, rt.created_at, NULL
+      FROM reward_transactions rt WHERE rt.user_id=${id}
+    ), filtered AS (
+      SELECT *, count(*) OVER() AS total_count FROM unified
+      WHERE (${filter}='all' OR type=${filter})
+        AND (${status}='all' OR status=${status})
+        AND (${search}='' OR description ILIKE ${`%${search}%`} OR reference ILIKE ${`%${search}%`} OR COALESCE(merchant,'') ILIKE ${`%${search}%`})
+    ) SELECT * FROM filtered ORDER BY created_at DESC, id DESC LIMIT ${pageSize} OFFSET ${(page-1)*pageSize}
+  `);
+  const items = rows.rows.map((row) => ({
+    id: String(row.id), type: String(row.type), status: String(row.status),
+    amountCents: Number(row.amount_cents), pointsDelta: Number(row.points_delta),
+    description: String(row.description ?? "Transaction"), reference: String(row.reference),
+    externalTransactionId: row.external_transaction_id ? String(row.external_transaction_id) : null,
+    merchant: row.merchant ? String(row.merchant) : null, createdAt: new Date(String(row.created_at)).toISOString(),
+  }));
+  const total = rows.rows[0] ? Number(rows.rows[0].total_count) : 0;
+  res.json({ items, pagination: { page, pageSize, total, totalPages: Math.ceil(total/pageSize), hasMore: page*pageSize<total } });
+});
 router.get("/wallet/cards", async (req, res) => {
   const id = actor(req.header("x-rewlo-user-id"));
   if (!id) {
