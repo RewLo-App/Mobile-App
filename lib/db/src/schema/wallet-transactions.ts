@@ -21,6 +21,8 @@ export const walletTransactionTypeEnum = pgEnum("wallet_transaction_type", [
   "mint",
   "burn",
   "transfer",
+  "balance_check",
+  "status_check",
 ]);
 
 export const walletTransactionStatusEnum = pgEnum("wallet_transaction_status", [
