@@ -335,6 +335,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       "rewlo_email",
       "rewlo_club",
       "rewlo_followed_clubs",
+      "rewlo_user_id",
     ]);
     setIsAuthenticated(false);
     setIsOnboarded(false);

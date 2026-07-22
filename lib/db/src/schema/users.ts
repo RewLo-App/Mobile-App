@@ -9,6 +9,7 @@ export const usersTable = pgTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   phoneNumber: text("phone_number"),
+  braleAddressId: text("brale_address_id").unique(),
   roleId: integer("role_id").references(() => rolesTable.id).notNull().default(1),
   // Monetary values are stored as integer cents to avoid floating-point errors.
   rewloCashBalance: integer("rewlo_cash_balance").notNull().default(0),

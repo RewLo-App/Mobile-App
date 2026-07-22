@@ -58,6 +58,8 @@ function RootLayoutNav() {
           animation: "slide_from_bottom",
         }}
       />
+      <Stack.Screen name="send-money" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="receive-money" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
     </Stack>
   );
 }

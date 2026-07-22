@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -152,19 +153,25 @@ export default function OnboardingScreen() {
     const apiBase = process.env.EXPO_PUBLIC_DOMAIN
       ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
       : "";
-    fetch(`${apiBase}/api/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        primaryClubId,
-        followedClubIds: followed,
-        zip,
-        teamName: club?.name ?? "your team",
-        gradientStart: club?.gradientStart ?? "#2563EB",
-        gradientEnd: club?.gradientEnd ?? "#041828",
-      }),
-    }).catch(() => {/* non-fatal */});
+    try {
+      const response = await fetch(`${apiBase}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          primaryClubId,
+          followedClubIds: followed,
+          zip,
+          teamName: club?.name ?? "your team",
+          gradientStart: club?.gradientStart ?? "#2563EB",
+          gradientEnd: club?.gradientEnd ?? "#041828",
+        }),
+      });
+      if (response.ok) {
+        const registration = await response.json() as { userId: number };
+        await AsyncStorage.setItem("rewlo_user_id", String(registration.userId));
+      }
+    } catch { /* Registration remains non-fatal during early access. */ }
 
     setLoading(false);
     setStep(4);

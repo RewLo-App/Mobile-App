@@ -54,5 +54,7 @@
   },
   "dependencies": {
     "expo-camera": "^17.0.10"
+    ,"expo-clipboard": "~8.0.8"
+    ,"react-native-qrcode-svg": "^6.3.15"
   }
 }

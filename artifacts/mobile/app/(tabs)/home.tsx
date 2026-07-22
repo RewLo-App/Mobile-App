@@ -5,14 +5,11 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
-  FlatList,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -81,10 +78,6 @@ export default function HomeScreen() {
   const { user, balance, rewloPoints, transactions, selectedClubId, followedClubIds } = useWallet();
   const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [sendModal, setSendModal] = useState(false);
-  const [sendAmount, setSendAmount] = useState("");
-  const [sendRecipient, setSendRecipient] = useState("");
-  const { sendMoney } = useWallet();
 
   const fixture = getFixtureForClub(selectedClubId);
   const [matchTime, setMatchTime] = useState(() =>
@@ -111,15 +104,6 @@ export default function HomeScreen() {
   }, [matchTime?.isToday, matchTime?.isLive]);
 
   const recent = transactions.slice(0, 4);
-
-  const handleSend = () => {
-    if (!sendAmount || !sendRecipient) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    sendMoney(parseFloat(sendAmount), sendRecipient);
-    setSendModal(false);
-    setSendAmount("");
-    setSendRecipient("");
-  };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -194,8 +178,8 @@ export default function HomeScreen() {
           {/* Quick Actions */}
           <View style={styles.actionsRow}>
             {[
-              { label: "Send", icon: "arrow-up" as keyof typeof Ionicons.glyphMap, action: () => setSendModal(true) },
-              { label: "Receive", icon: "arrow-down" as keyof typeof Ionicons.glyphMap, action: () => {} },
+              { label: "Send", icon: "arrow-up" as keyof typeof Ionicons.glyphMap, action: () => router.push("/send-money" as never) },
+              { label: "Receive", icon: "arrow-down" as keyof typeof Ionicons.glyphMap, action: () => router.push("/receive-money" as never) },
               { label: "RewLo Pay", icon: "sparkles" as keyof typeof Ionicons.glyphMap, action: () => router.push("/smart-pay") },
               { label: "Top Up", icon: "add" as keyof typeof Ionicons.glyphMap, action: () => {} },
             ].map((a) => (
@@ -345,36 +329,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Send Modal */}
-      <Modal visible={sendModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setSendModal(false)} />
-        <View style={[styles.modalSheet, { backgroundColor: colors.card, paddingBottom: insets.bottom + 20 }]}>
-          <View style={styles.modalHandle} />
-          <Text style={[styles.modalTitle, { color: colors.foreground }]}>Send Money</Text>
-          <TextInput
-            style={[styles.modalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-            placeholder="Recipient email or @tag"
-            placeholderTextColor={colors.mutedForeground}
-            value={sendRecipient}
-            onChangeText={setSendRecipient}
-          />
-          <TextInput
-            style={[styles.modalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-            placeholder="Amount"
-            placeholderTextColor={colors.mutedForeground}
-            value={sendAmount}
-            onChangeText={setSendAmount}
-            keyboardType="decimal-pad"
-          />
-          <Pressable
-            onPress={handleSend}
-            style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-          >
-            <Text style={styles.modalBtnText}>Send</Text>
-          </Pressable>
-        </View>
-      </Modal>
     </View>
   );
 }
