@@ -6,6 +6,10 @@ import {
   userCardsTable,
   usersTable,
   walletTransactionsTable,
+  appSettingsTable,
+  offerCategoriesTable,
+  offersTable,
+  offerRedemptionsTable,
 } from "./schema";
 
 const demoUsers = [
@@ -44,6 +48,19 @@ const demoMerchants = [
   ["BOS001", "Boston Championship Store", "store@bos001.demo.rewlo.io", "Celtics and Red Sox licensed products."],
 ] as const;
 
+const demoOffers = [
+  ["Sports","Nike","20% off football boots","20% OFF",500],["Sports","Adidas","Free jersey personalisation","FREE",800],
+  ["Stadium","Etihad Stadium","Matchday meal bundle","$10 OFF",650],["Sports","Puma","15% off training gear","15% OFF",400],
+  ["Merchandise","Fanatics","$20 off licensed merchandise","$20 OFF",900],["Stadium","Wembley Stadium","Stadium tour discount","2 FOR 1",1200],
+  ["Tickets","Ticketmaster","No service fee on match tickets","NO FEE",1000],["Media","Sky Sports","One month sports pass","1 MONTH",1400],
+  ["Gaming","EA Sports FC","Bonus FC points","5K POINTS",600],["Sports","Under Armour","25% off fan apparel","25% OFF",750],
+  ["Stadium","Old Trafford","Free matchday programme","FREE",350],["Stadium","Anfield","Museum entry discount","30% OFF",550],
+  ["Merchandise","New Era","Club cap discount","20% OFF",450],["Food","Levy Restaurants","Free stadium drink","FREE",300],
+  ["Tickets","SeatGeek","$15 ticket credit","$15 OFF",850],["Sports","New Balance","Running gear discount","15% OFF",500],
+  ["Media","ESPN+","One month subscription","1 MONTH",1300],["Gaming","PlayStation","Sports game credit","$10 CREDIT",700],
+  ["Experiences","Manchester City","Training ground tour","VIP TOUR",2500],["Experiences","Arsenal FC","Signed shirt prize draw","ENTRY",200],
+] as const;
+
 const cardProviders = ["Visa", "Mastercard", "Visa", "Mastercard"] as const;
 const cardLastFour = ["4821", "7394", "1048", "6612", "9035", "2576", "8140", "3906", "5268", "1479"] as const;
 const transactionTypes = [
@@ -57,6 +74,12 @@ async function seed() {
     await tx.insert(rolesTable).values([{ name: "Fan" }, { name: "Merchant" }]).onConflictDoNothing();
     const [fanRole] = await tx.select().from(rolesTable).where(eq(rolesTable.name, "Fan"));
     if (!fanRole) throw new Error("Fan role was not created");
+    await tx.insert(appSettingsTable).values({key:"welcome_points",value:"500"}).onConflictDoUpdate({target:appSettingsTable.key,set:{value:"500"}});
+    const categoryNames=[...new Set(demoOffers.map(o=>o[0]))];
+    const categories=await Promise.all(categoryNames.map(async name=>(await tx.insert(offerCategoriesTable).values({name,icon:"pricetag-outline"}).onConflictDoUpdate({target:offerCategoriesTable.name,set:{icon:"pricetag-outline"}}).returning())[0]));
+    await tx.delete(offerRedemptionsTable);
+    await tx.delete(offersTable);
+    await tx.insert(offersTable).values(demoOffers.map(([category,merchant,description,discountLabel,pointsRequired])=>({categoryId:categories.find(c=>c.name===category)!.id,merchant,title:description,description,discountLabel,pointsRequired,redemptionValueCents:100,available:true,expiresAt:new Date("2027-12-31T23:59:59Z")})));
 
     const merchantRows = await Promise.all(
       demoMerchants.map(async ([merchantCode, merchantName, email, description]) => {

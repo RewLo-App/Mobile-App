@@ -180,8 +180,8 @@ export default function HomeScreen() {
             {[
               { label: "Send", icon: "arrow-up" as keyof typeof Ionicons.glyphMap, action: () => router.push("/send-money" as never) },
               { label: "Receive", icon: "arrow-down" as keyof typeof Ionicons.glyphMap, action: () => router.push("/receive-money" as never) },
-              { label: "RewLo Pay", icon: "sparkles" as keyof typeof Ionicons.glyphMap, action: () => router.push("/smart-pay") },
-              { label: "Top Up", icon: "add" as keyof typeof Ionicons.glyphMap, action: () => {} },
+              { label: "RewLo Pay", icon: "sparkles" as keyof typeof Ionicons.glyphMap, action: () => router.push("/merchant-pay" as never) },
+              { label: "Top Up", icon: "add" as keyof typeof Ionicons.glyphMap, action: () => router.push("/top-up" as never) },
             ].map((a) => (
               <Pressable
                 key={a.label}

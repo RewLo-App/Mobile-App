@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -114,10 +114,11 @@ function OfferCard({ item, onRedeem, canAfford }: OfferCardProps) {
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { rewloPoints, offers, redeemOffer, transactions, followedClubIds, selectedClubId } = useWallet();
+  const { rewloPoints, offers, redeemOffer, refreshWallet, transactions, followedClubIds, selectedClubId } = useWallet();
   const [filter, setFilter] = useState<string>("All");
+  useEffect(() => { refreshWallet().catch(() => {}); }, [refreshWallet]);
 
-  const categories = ["All", "Sports", "Stadium", "Media", "Gaming"];
+  const categories = ["All", ...Array.from(new Set(offers.map((offer) => offer.category)))];
   const filtered = filter === "All" ? offers : offers.filter((o) => o.category === filter);
   const rewardTxs = transactions.filter((t) => t.type === "reward").slice(0, 3);
 
@@ -131,7 +132,7 @@ export default function RewardsScreen() {
     : 1;
   const ptsToNext = nextMilestone ? nextMilestone.points - rewloPoints : 0;
 
-  const handleRedeem = (id: string) => {
+  const handleRedeem = async (id: string) => {
     const offer = offers.find((o) => o.id === id);
     if (!offer) return;
     if (rewloPoints < offer.pointsCost) {
@@ -139,7 +140,8 @@ export default function RewardsScreen() {
       return;
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    redeemOffer(id);
+    try { await redeemOffer(id); }
+    catch (error) { Alert.alert("Redemption failed", error instanceof Error ? error.message : "Please try again."); }
   };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;

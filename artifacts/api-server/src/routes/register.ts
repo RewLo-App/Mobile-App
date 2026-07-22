@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { ReplitConnectors } from "@replit/connectors-sdk";
-import { db, usersTable } from "@workspace/db";
+import { appSettingsTable, db, rewardTransactionsTable, usersTable } from "@workspace/db";
 import { eq, count, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
@@ -94,6 +94,8 @@ router.post("/register", async (req, res) => {
       userId = existing[0].id;
       req.log.info({ userId, email }, "User already registered — skipping insert");
     } else {
+      const [welcomeSetting] = await db.select({ value: appSettingsTable.value }).from(appSettingsTable).where(eq(appSettingsTable.key, "welcome_points")).limit(1);
+      const welcomePoints = Number.parseInt(welcomeSetting?.value ?? "0", 10);
       const inserted = await db
         .insert(usersTable)
         .values({
@@ -101,9 +103,11 @@ router.post("/register", async (req, res) => {
           primaryClubId,
           followedClubIds: JSON.stringify(followedClubIds ?? [primaryClubId]),
           zip: zip ?? null,
+          rewloRewardPoints: Number.isSafeInteger(welcomePoints) && welcomePoints > 0 ? welcomePoints : 0,
         })
         .returning({ id: usersTable.id });
       userId = inserted[0].id;
+      if (welcomePoints > 0) await db.insert(rewardTransactionsTable).values({ userId, pointsDelta: welcomePoints, reason: "Welcome bonus", reference: `WELCOME-${userId}` }).onConflictDoNothing();
       req.log.info({ userId, email, primaryClubId }, "New user registered");
     }
   } catch (err) {

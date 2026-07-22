@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
 import { DEFAULT_CLUB_ID, getClubById } from "@/constants/clubs";
+import { walletRequest } from "@/utils/walletApi";
 
 export interface Transaction {
   id: string;
@@ -64,7 +65,8 @@ interface WalletContextType {
   deleteAccount: () => Promise<void>;
   completeOnboarding: (email: string, primaryClubId: string, clubIds: string[]) => Promise<void>;
   sendMoney: (amount: number, recipient: string) => void;
-  redeemOffer: (offerId: string) => void;
+  redeemOffer: (offerId: string) => Promise<void>;
+  refreshWallet: () => Promise<void>;
   spendPoints: (points: number) => void;
   addTransaction: (tx: Omit<Transaction, "id" | "date">) => void;
 }
@@ -250,6 +252,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [offers, setOffers] = useState<Offer[]>(MOCK_OFFERS);
   const [selectedClubId, setSelectedClubId] = useState(DEFAULT_CLUB_ID);
 
+  const refreshWallet = useCallback(async () => {
+    const [summary, rewards] = await Promise.all([
+      walletRequest<{ balanceCents: number; rewardPoints: number }>("/api/wallet/summary"),
+      walletRequest<{ points: number; offers: Array<{ id:number; merchant:string; category:string; description:string; discount:string; pointsCost:number; expiresAt:string; redeemed:boolean }> }>("/api/rewards"),
+    ]);
+    setBalance(summary.balanceCents / 100);
+    setRewloPoints(rewards.points);
+    setOffers(rewards.offers.map(o => ({ ...o, id: String(o.id) })));
+  }, []);
+
   useEffect(() => {
     Promise.all([
       AsyncStorage.getItem("rewlo_onboarded"),
@@ -376,11 +388,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   );
 
   const redeemOffer = useCallback(
-    (offerId: string) => {
+    async (offerId: string) => {
       const offer = offers.find((o) => o.id === offerId);
       if (!offer || offer.redeemed || rewloPoints < offer.pointsCost) return;
-      setOffers((prev) => prev.map((o) => (o.id === offerId ? { ...o, redeemed: true } : o)));
-      setRewloPoints((prev) => prev - offer.pointsCost);
+      await walletRequest(`/api/rewards/${offerId}/redeem`, { method: "POST" });
+      await refreshWallet();
       addTransaction({
         type: "reward",
         amount: 0,
@@ -389,7 +401,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         status: "completed",
       });
     },
-    [offers, rewloPoints, addTransaction]
+    [offers, rewloPoints, addTransaction, refreshWallet]
   );
 
   const spendPoints = useCallback((points: number) => {
@@ -417,6 +429,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         completeOnboarding,
         sendMoney,
         redeemOffer,
+        refreshWallet,
         spendPoints,
         addTransaction,
       }}

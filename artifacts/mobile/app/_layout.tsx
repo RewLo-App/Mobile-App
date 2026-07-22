@@ -60,6 +60,8 @@ function RootLayoutNav() {
       />
       <Stack.Screen name="send-money" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="receive-money" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="top-up" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="merchant-pay" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
     </Stack>
   );
 }
