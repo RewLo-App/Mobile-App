@@ -18,7 +18,7 @@ export default function MerchantPay() {
     [amount, setAmount] = useState(""),
     [confirm, setConfirm] = useState(false),
     [loading, setLoading] = useState(false),
-    [reference, setReference] = useState(""),
+    [paid, setPaid] = useState(false),
     [error, setError] = useState<string | null>(null);
   const dollars = Number(amount),
     valid = dollars > 0 && dollars <= balance;
@@ -38,7 +38,7 @@ export default function MerchantPay() {
     if (!merchant || !valid) return;
     setLoading(true);
     try {
-      const r = await walletRequest<{ reference: string }>(
+      await walletRequest<{ reference: string }>(
         "/api/wallet/merchant-pay",
         {
           method: "POST",
@@ -49,7 +49,7 @@ export default function MerchantPay() {
         },
       );
       await refreshWallet();
-      setReference(r.reference);
+      setPaid(true);
     } catch (e) {
       setError(apiErrorMessage(e, "Payment failed"));
     } finally {
@@ -61,7 +61,11 @@ export default function MerchantPay() {
       style={[s.root, { backgroundColor: c.background, paddingTop: i.top }]}
     >
       <View style={s.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Close RewLo Pay"
+          onPress={() => router.replace("/(tabs)/home")}
+        >
           <Ionicons name="close" size={25} color={c.foreground} />
         </Pressable>
         <Text style={[s.title, { color: c.foreground }]}>RewLo Pay</Text>
@@ -70,7 +74,7 @@ export default function MerchantPay() {
         </Pressable>
       </View>
       <View style={s.content}>
-        {reference ? (
+        {paid ? (
           <View style={s.center}>
             <Ionicons name="checkmark-circle" size={94} color={c.success} />
             <Text style={[s.heading, { color: c.foreground }]}>
@@ -81,9 +85,6 @@ export default function MerchantPay() {
             </Text>
             <Text style={{ color: c.mutedForeground }}>
               Paid to {merchant?.name}
-            </Text>
-            <Text selectable style={[s.ref, { color: c.mutedForeground }]}>
-              Reference {reference}
             </Text>
             <Button label="Done" onPress={() => router.back()} />
           </View>
@@ -262,5 +263,4 @@ const s = StyleSheet.create({
   amount: { fontSize: 58, fontFamily: "Inter_700Bold", minWidth: 160 },
   center: { alignItems: "center", paddingTop: 50 },
   total: { fontSize: 48, fontFamily: "Inter_700Bold" },
-  ref: { marginTop: 20, fontSize: 12, textAlign: "center" },
 });

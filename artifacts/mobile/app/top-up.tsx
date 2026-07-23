@@ -98,7 +98,7 @@ export default function TopUp() {
         ) : (
           <>
             <Text style={[s.heading, { color: c.foreground }]}>
-              {confirm ? "Confirm top up" : "Choose a demo card"}
+              {confirm ? "Confirm top up" : "Choose debit card"}
             </Text>
             {cards.map((card) => (
               <Pressable

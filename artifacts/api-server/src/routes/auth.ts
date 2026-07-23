@@ -40,7 +40,7 @@ function resetTokenHash(token: string) {
 }
 const resetResponse = { message: "If an account exists for that email, password reset instructions will be sent." };
 
-router.post("/v1/auth/register", async (req, res) => {
+router.post("/auth/register", async (req, res) => {
   const body = req.body as Record<string, unknown>;
   if (Object.keys(body).some((field) => !allowedFields.has(field))) {
     res.status(400).json({ error: "Role, points, and wallet fields are assigned by the server." });
@@ -160,7 +160,7 @@ router.post("/v1/auth/register", async (req, res) => {
   }
 });
 
-router.post("/v1/auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
   const invalid = () => res.status(401).json({ error: "Invalid email or password." });
@@ -174,7 +174,7 @@ router.post("/v1/auth/login", async (req, res) => {
   res.json({ tokens });
 });
 
-router.post("/v1/auth/forgot-password", async (req, res) => {
+router.post("/auth/forgot-password", async (req, res) => {
   const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
   // Always record the attempt and return the identical response, including for
   // malformed/unknown addresses, to avoid account enumeration.
@@ -214,7 +214,7 @@ router.post("/v1/auth/forgot-password", async (req, res) => {
   res.status(202).json(resetResponse);
 });
 
-router.post("/v1/auth/reset-password", async (req, res) => {
+router.post("/auth/reset-password", async (req, res) => {
   const token = typeof req.body?.token === "string" ? req.body.token : "";
   const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
   if (!passwordIsValid(newPassword)) { res.status(400).json({ error: "Password does not meet security requirements." }); return; }
@@ -233,7 +233,7 @@ router.post("/v1/auth/reset-password", async (req, res) => {
   res.status(204).end();
 });
 
-router.post("/v1/auth/refresh", async (req, res) => {
+router.post("/auth/refresh", async (req, res) => {
   const refreshToken = typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
   if (!refreshToken) { res.status(401).json({ error: "Invalid refresh token." }); return; }
   const session = await getRefreshTokenUser(refreshToken);
@@ -243,7 +243,7 @@ router.post("/v1/auth/refresh", async (req, res) => {
   res.json({ tokens: { accessToken: tokens.accessToken, accessTokenExpiresIn: tokens.accessTokenExpiresIn, refreshToken: tokens.refreshToken, refreshTokenExpiresAt: tokens.refreshTokenExpiresAt } });
 });
 
-router.post("/v1/auth/logout", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.post("/auth/logout", requireAuth, async (req: AuthenticatedRequest, res) => {
   const refreshToken = typeof req.body?.refreshToken === "string" ? req.body.refreshToken : "";
   if (!refreshToken || !req.auth || !await revokeRefreshToken(refreshToken, req.auth.userId)) {
     res.status(401).json({ error: "Invalid refresh token." }); return;
@@ -252,7 +252,7 @@ router.post("/v1/auth/logout", requireAuth, async (req: AuthenticatedRequest, re
   res.status(204).end();
 });
 
-router.get("/v1/auth/me", requireAuth, async (req: AuthenticatedRequest, res) => {
+router.get("/auth/me", requireAuth, async (req: AuthenticatedRequest, res) => {
   const [user] = await db.select({
     id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName,
     email: usersTable.email, role: rolesTable.name, zipCode: usersTable.zipCode,

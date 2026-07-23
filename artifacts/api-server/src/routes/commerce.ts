@@ -520,6 +520,30 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
     return;
   }
   try {
+    // BraleService records its provider audit entry through a separate DB
+    // connection. Resolve the transfer outside a transaction so that audit
+    // write cannot wait on this user's row lock.
+    const [preflightUser] = await db
+      .select({ balanceCents: usersTable.rewloCashBalance, braleAddressId: usersTable.braleAddressId })
+      .from(usersTable)
+      .where(eq(usersTable.id, id));
+    const [preflightMerchant] = await db
+      .select()
+      .from(merchantsTable)
+      .where(eq(merchantsTable.merchantCode, code));
+    if (!preflightUser || !preflightMerchant) throw new Error("NOT_FOUND");
+    if (preflightUser.balanceCents < amount.cents) throw new Error("INSUFFICIENT_BALANCE");
+    if (!preflightUser.braleAddressId || !preflightMerchant.braleAddressId) throw new Error("WALLET_NOT_CONFIGURED");
+
+    const reference = randomUUID();
+    const brale = await new BraleService().transferStablecoin({
+      userId: id,
+      sourceAddressId: preflightUser.braleAddressId,
+      destinationAddressId: preflightMerchant.braleAddressId,
+      amount: { value: amount.text, currency: "USD" },
+      idempotencyKey: reference,
+    });
+
     const result = await db.transaction(async (tx) => {
       const locked = await tx.execute(
         sql`SELECT id, rewlo_cash_balance, brale_address_id FROM users WHERE id=${id} FOR UPDATE`,
@@ -536,14 +560,6 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
         throw new Error("INSUFFICIENT_BALANCE");
       if (!user.brale_address_id || !merchant.braleAddressId)
         throw new Error("WALLET_NOT_CONFIGURED");
-      const reference = randomUUID();
-      const brale = await new BraleService().transferStablecoin({
-        userId: id,
-        sourceAddressId: user.brale_address_id,
-        destinationAddressId: merchant.braleAddressId,
-        amount: { value: amount.text, currency: "USD" },
-        idempotencyKey: reference,
-      });
       await tx
         .update(usersTable)
         .set({
@@ -580,9 +596,10 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
     res.status(201).json(result);
   } catch (e) {
     const m = e instanceof Error ? e.message : "";
+    const providerError = e instanceof BraleApiError ? e : null;
     res
       .status(
-        m === "INSUFFICIENT_BALANCE" ? 409 : m === "NOT_FOUND" ? 404 : 502,
+        m === "INSUFFICIENT_BALANCE" || m === "WALLET_NOT_CONFIGURED" ? 409 : m === "NOT_FOUND" ? 404 : 502,
       )
       .json({
         error:
@@ -590,7 +607,11 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
             ? "Insufficient balance"
             : m === "NOT_FOUND"
               ? "Merchant not found"
-              : "Payment failed",
+              : m === "WALLET_NOT_CONFIGURED"
+                ? "Brale wallet is not configured"
+                : providerError?.message ?? "Payment failed",
+        providerCode: providerError?.code,
+        providerRequestId: providerError?.requestId,
       });
   }
 });

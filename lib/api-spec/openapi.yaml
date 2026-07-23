@@ -1,17 +1,17 @@
 openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
-  title: Api
-  version: 0.1.0
-  description: API specification
+  title: RewLo API
+  version: 1.0.0
+  description: Version 1 API for RewLo wallet, rewards, payments, and account operations.
 servers:
-  - url: /api
+  - url: /api/v1
     description: Base API path
 tags:
   - name: health
     description: Health operations
 paths:
-  /v1/auth/register:
+  /auth/register:
     post:
       operationId: register
       tags: [auth]
@@ -40,7 +40,7 @@ paths:
           description: Duplicate or unsafe registration retry
         "503":
           description: Wallet provisioning could be retried safely
-  /v1/auth/login:
+  /auth/login:
     post:
       operationId: login
       tags: [auth]
@@ -58,7 +58,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/TokenResponse" }
         "401": { description: Invalid credentials or unavailable account }
-  /v1/auth/forgot-password:
+  /auth/forgot-password:
     post:
       operationId: forgotPassword
       tags: [auth]
@@ -74,7 +74,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/GenericMessage" }
-  /v1/auth/reset-password:
+  /auth/reset-password:
     post:
       operationId: resetPassword
       tags: [auth]
@@ -87,7 +87,7 @@ paths:
       responses:
         "204": { description: Password reset and sessions revoked }
         "400": { description: Invalid reset link or password policy failure }
-  /v1/auth/refresh:
+  /auth/refresh:
     post:
       operationId: refreshSession
       tags: [auth]
@@ -104,7 +104,7 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/TokenResponse" }
         "401": { description: "Invalid, expired, revoked, or reused refresh token" }
-  /v1/auth/logout:
+  /auth/logout:
     post:
       operationId: logout
       tags: [auth]
@@ -118,7 +118,7 @@ paths:
       responses:
         "204": { description: Session revoked }
         "401": { description: Authentication or refresh token is invalid }
-  /v1/auth/me:
+  /auth/me:
     get:
       operationId: getCurrentUser
       tags: [auth]

@@ -556,7 +556,7 @@ export const getHealthCheckUrl = () => {
 
 
 
-  return `/api/healthz`
+  return `/api/v1/healthz`
 }
 
 /**
@@ -580,7 +580,7 @@ export const healthCheck = async ( options?: RequestInit): Promise<HealthStatus>
 
 export const getHealthCheckQueryKey = () => {
     return [
-    `/api/healthz`
+    `/api/v1/healthz`
     ] as const;
     }
 

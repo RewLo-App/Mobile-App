@@ -71,6 +71,13 @@
       "when": 1784754822020,
       "tag": "0009_password_reset_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784754822021,
+      "tag": "0010_add_merchant_brale_wallet_fields",
+      "breakpoints": true
     }
   ]
 }

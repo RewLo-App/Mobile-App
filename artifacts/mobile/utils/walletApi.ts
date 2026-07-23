@@ -25,7 +25,12 @@ export async function walletRequest<T>(path: string, init: RequestInit = {}): Pr
   init.signal?.addEventListener("abort", abortFromCaller, { once: true });
 
   try {
-    return await customFetch<T>(path, {
+    const versionedPath = path.startsWith("/api/v1/")
+      ? path
+      : path.startsWith("/api/")
+        ? `/api/v1/${path.slice("/api/".length)}`
+        : path;
+    return await customFetch<T>(versionedPath, {
       ...init,
       signal: controller.signal,
       headers: { "Content-Type": "application/json", ...init.headers },
