@@ -11,9 +11,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ApiErrorDialog } from "@/components/ApiErrorDialog";
 import { useColors } from "@/hooks/useColors";
 import { useWallet } from "@/context/WalletContext";
-import { walletRequest } from "@/utils/walletApi";
+import { apiErrorMessage, walletRequest } from "@/utils/walletApi";
 type Card = {
   id: number;
   last4Digits: string;
@@ -31,19 +32,23 @@ export default function TopUp() {
     [confirm, setConfirm] = useState(false),
     [loading, setLoading] = useState(false),
     [done, setDone] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState<string | null>(null);
   useEffect(() => {
     walletRequest<{ cards: Card[] }>("/api/wallet/cards")
-      .then((x) => {
-        setCards(x.cards);
+      .then(async (x) => {
+        const availableCards = x.cards.length > 0
+          ? x.cards
+          : [(await walletRequest<{ card: Card }>("/api/wallet/cards/demo", { method: "POST" })).card];
+        setCards(availableCards);
         setSelected(
-          x.cards.find((y) => y.isDefault)?.id ?? x.cards[0]?.id ?? null,
+          availableCards.find((y) => y.isDefault)?.id ?? availableCards[0]?.id ?? null,
         );
       })
-      .catch((e) => setError(e.message));
+      .catch((e) => setError(apiErrorMessage(e, "Could not load the demo card")));
   }, []);
   const value = Number(amount),
-    valid = value > 0 && Number.isFinite(value);
+    valid = value > 0 && Number.isFinite(value),
+    canSubmit = valid && selected !== null;
   async function submit() {
     if (!selected || !valid) return;
     setLoading(true);
@@ -59,7 +64,7 @@ export default function TopUp() {
       await refreshWallet();
       setDone(r.reference);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Top up failed");
+      setError(apiErrorMessage(e, "Top up failed"));
     } finally {
       setLoading(false);
     }
@@ -142,10 +147,10 @@ export default function TopUp() {
               />
             </View>
             <Text style={[s.note, { color: c.mutedForeground }]}>
-              Demo card only · Brale Solana Devnet
+              Demo card only · Brale Base Sepolia
             </Text>
             <Button
-              disabled={!valid || loading}
+              disabled={!canSubmit || loading}
               label={
                 loading
                   ? "Minting…"
@@ -164,8 +169,8 @@ export default function TopUp() {
             )}
           </>
         )}
-        {!!error && <Text style={s.error}>{error}</Text>}
       </ScrollView>
+      <ApiErrorDialog message={error} onClose={() => setError(null)} title="Top up failed" />
     </View>
   );
 }
@@ -182,7 +187,7 @@ function Button({
     <Pressable
       disabled={disabled}
       onPress={onPress}
-      style={{ opacity: disabled ? 0.5 : 1, marginTop: 24 }}
+      style={{ opacity: disabled ? 0.5 : 1, marginTop: 24, width: "100%" }}
     >
       <LinearGradient colors={["#00E5CC", "#2563EB"]} style={s.button}>
         <Text style={s.buttonText}>{label}</Text>
@@ -231,6 +236,5 @@ const s = StyleSheet.create({
   },
   buttonText: { color: "white", fontSize: 16, fontFamily: "Inter_700Bold" },
   cancel: { textAlign: "center", padding: 16 },
-  success: { alignItems: "center", gap: 10, paddingTop: 40 },
-  error: { color: "#EF4444", textAlign: "center", marginTop: 16 },
+  success: { alignItems: "center", gap: 10, paddingTop: 40, width: "100%" },
 });

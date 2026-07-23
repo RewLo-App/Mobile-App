@@ -4,9 +4,10 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ApiErrorDialog } from "@/components/ApiErrorDialog";
 import { useColors } from "@/hooks/useColors";
 import { useWallet } from "@/context/WalletContext";
-import { walletRequest } from "@/utils/walletApi";
+import { apiErrorMessage, walletRequest } from "@/utils/walletApi";
 type Merchant = { id: number; code: string; name: string; description: string };
 export default function MerchantPay() {
   const c = useColors(),
@@ -18,7 +19,7 @@ export default function MerchantPay() {
     [confirm, setConfirm] = useState(false),
     [loading, setLoading] = useState(false),
     [reference, setReference] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState<string | null>(null);
   const dollars = Number(amount),
     valid = dollars > 0 && dollars <= balance;
   async function lookup() {
@@ -30,7 +31,7 @@ export default function MerchantPay() {
         ),
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Merchant not found");
+      setError(apiErrorMessage(e, "Merchant not found"));
     }
   }
   async function pay() {
@@ -50,7 +51,7 @@ export default function MerchantPay() {
       await refreshWallet();
       setReference(r.reference);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Payment failed");
+      setError(apiErrorMessage(e, "Payment failed"));
     } finally {
       setLoading(false);
     }
@@ -175,10 +176,10 @@ export default function MerchantPay() {
                 />
               </>
             )}
-            {!!error && <Text style={s.error}>{error}</Text>}
           </>
         )}
       </View>
+      <ApiErrorDialog message={error} onClose={() => setError(null)} title="Payment failed" />
     </View>
   );
 }
@@ -262,5 +263,4 @@ const s = StyleSheet.create({
   center: { alignItems: "center", paddingTop: 50 },
   total: { fontSize: 48, fontFamily: "Inter_700Bold" },
   ref: { marginTop: 20, fontSize: 12, textAlign: "center" },
-  error: { color: "#EF4444", textAlign: "center", marginTop: 16 },
 });

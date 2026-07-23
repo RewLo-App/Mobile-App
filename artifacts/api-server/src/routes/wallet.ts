@@ -3,16 +3,18 @@ import { Router } from "express";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { db, usersTable, walletTransactionsTable } from "@workspace/db";
 import BraleService from "../services/brale-service";
+import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth";
+import { authenticatedUserId } from "../middleware/identity";
 
 const router = Router();
-
-function userIdFromRequest(value: string | undefined): number | null {
+router.use(requireAuth, requireRole("Fan"));
+const parseUserId = (value: unknown) => {
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : null;
-}
+};
 
-router.get("/wallet/users", async (req, res) => {
-  const userId = userIdFromRequest(req.header("x-rewlo-user-id"));
+router.get("/wallet/users", async (req: AuthenticatedRequest, res) => {
+  const userId = authenticatedUserId(req)!;
   const query = typeof req.query.q === "string" ? req.query.q.trim() : "";
   if (!userId) { res.status(401).json({ error: "User identity is required" }); return; }
   if (query.length < 2) { res.json({ users: [] }); return; }
@@ -35,8 +37,8 @@ router.get("/wallet/users", async (req, res) => {
   res.json({ users: users.map((user) => ({ ...user, name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email.split("@")[0] })) });
 });
 
-router.get("/wallet/receive", async (req, res) => {
-  const userId = userIdFromRequest(req.header("x-rewlo-user-id"));
+router.get("/wallet/receive", async (req: AuthenticatedRequest, res) => {
+  const userId = authenticatedUserId(req)!;
   if (!userId) { res.status(401).json({ error: "User identity is required" }); return; }
   const [user] = await db.select({ id: usersTable.id, email: usersTable.email, braleAddressId: usersTable.braleAddressId })
     .from(usersTable).where(eq(usersTable.id, userId)).limit(1);
@@ -44,9 +46,9 @@ router.get("/wallet/receive", async (req, res) => {
   res.json({ email: user.email, walletIdentifier: user.braleAddressId ?? user.email, qrValue: `rewlo://receive/${encodeURIComponent(user.email)}` });
 });
 
-router.post("/wallet/send", async (req, res) => {
-  const senderId = userIdFromRequest(req.header("x-rewlo-user-id"));
-  const recipientId = userIdFromRequest(String(req.body?.recipientId ?? ""));
+router.post("/wallet/send", async (req: AuthenticatedRequest, res) => {
+  const senderId = authenticatedUserId(req)!;
+  const recipientId = parseUserId(req.body?.recipientId);
   const amount = typeof req.body?.amount === "string" ? req.body.amount : String(req.body?.amount ?? "");
   if (!senderId) { res.status(401).json({ error: "User identity is required" }); return; }
   if (!recipientId || recipientId === senderId) { res.status(400).json({ error: "Select a valid recipient" }); return; }

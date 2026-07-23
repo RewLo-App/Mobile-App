@@ -29,6 +29,48 @@
       "when": 1784754822014,
       "tag": "0003_rewards_and_merchant_wallets",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784754822015,
+      "tag": "0004_auth_user_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784754822016,
+      "tag": "0005_auth_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784754822017,
+      "tag": "0006_platform_custody_registration",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784754822018,
+      "tag": "0007_managed_wallet_registration",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784754822019,
+      "tag": "0008_revoked_access_tokens",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784754822020,
+      "tag": "0009_password_reset_rate_limits",
+      "breakpoints": true
     }
   ]
 }

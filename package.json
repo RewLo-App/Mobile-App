@@ -3,13 +3,15 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "preinstall": "node -e \"const fs=require('fs'); fs.rmSync('package-lock.json',{force:true}); fs.rmSync('yarn.lock',{force:true}); if (!process.env.npm_config_user_agent?.startsWith('pnpm/')) { console.error('Use pnpm instead'); process.exit(1); }\"",
+   "preinstall": "node -e \"const fs=require('fs'); fs.rmSync('package-lock.json',{force:true}); fs.rmSync('yarn.lock',{force:true}); if (!process.env.npm_config_user_agent?.startsWith('pnpm/')) { console.error('Use pnpm instead'); process.exit(1); }\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "db:reset-auth-data": "pnpm --filter @workspace/db run reset-auth-data",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
   "private": true,
   "devDependencies": {
+    "concurrently": "^10.0.3",
     "prettier": "^3.8.4",
     "typescript": "~5.9.3"
   }

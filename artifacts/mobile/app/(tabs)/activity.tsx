@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, FlatList, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,7 +19,9 @@ export default function ActivityScreen(){const colors=useColors(),insets=useSafe
   useEffect(()=>{const t=setTimeout(()=>setDebounced(search.trim()),300);return()=>clearTimeout(t)},[search]);
   const load=useCallback(async(nextPage:number,append=false)=>{if(nextPage===1)setLoading(true);setError("");try{const q=new URLSearchParams({page:String(nextPage),pageSize:"20",type:filter,status,search:debounced});const data=await walletRequest<Page>(`/api/wallet/transactions?${q}`);setItems(prev=>append?[...prev,...data.items]:data.items);setPage(nextPage);setHasMore(data.pagination.hasMore)}catch(e){setError(e instanceof Error?e.message:"Could not load transactions")}finally{setLoading(false);setRefreshing(false)}},[filter,status,debounced]);
   useEffect(()=>{load(1)},[load]);
-  const refresh=()=>{setRefreshing(true);Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);load(1)};
+  const refreshPendingMints=useCallback(async()=>{try{await walletRequest("/api/wallet/transactions/refresh-pending",{method:"POST"})}catch{/* Keep the ledger usable with its last known statuses. */}await load(1)},[load]);
+  useFocusEffect(useCallback(()=>{void refreshPendingMints()},[refreshPendingMints]));
+  const refresh=()=>{setRefreshing(true);Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);void refreshPendingMints()};
   const topPad=Platform.OS==="web"?67:insets.top;
   return <View style={[s.root,{backgroundColor:colors.background}]}><View style={[s.header,{paddingTop:topPad+16}]}><Text style={[s.headerTitle,{color:colors.foreground}]}>Activity</Text><View style={[s.statusWrap,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name="options-outline" size={16} color={colors.foreground}/><Text style={[s.statusText,{color:colors.foreground}]}>{status==="all"?"All statuses":status}</Text></View></View>
     <View style={[s.search,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name="search" size={19} color={colors.mutedForeground}/><TextInput value={search} onChangeText={setSearch} placeholder="Search transactions or reference" placeholderTextColor={colors.mutedForeground} style={[s.searchInput,{color:colors.foreground}]}/>{search?<Pressable onPress={()=>setSearch("")}><Ionicons name="close-circle" size={18} color={colors.mutedForeground}/></Pressable>:null}</View>

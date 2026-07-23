@@ -53,8 +53,9 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-camera": "^17.0.10"
-    ,"expo-clipboard": "~8.0.8"
-    ,"react-native-qrcode-svg": "^6.3.15"
+    "expo-camera": "^17.0.10",
+    "expo-secure-store": "~15.0.8",
+    "expo-clipboard": "~8.0.8",
+    "react-native-qrcode-svg": "^6.3.15"
   }
 }

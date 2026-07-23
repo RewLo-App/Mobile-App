@@ -36,14 +36,33 @@ interface BraleConfig {
   apiUrl: string;
   authUrl: string;
   stablecoin: string;
-  transferType: string;
+  network: string;
+  requestTimeoutMs: number;
+}
+
+export interface ManagedWalletProvisioningInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  zipCode: string;
+  idempotencyKey: string;
+  existingAccountId?: string | null;
+}
+
+export interface ManagedWalletProvisioningResult {
+  braleAccountId: string;
+  braleWalletId: string;
+  braleAddressId?: string;
+  blockchainAddress: string;
+  blockchainNetwork: string;
 }
 
 export class BraleApiError extends Error {
   constructor(
     message: string,
     public readonly statusCode: number,
-    public readonly response: unknown,
+    public readonly code: "provider_unavailable" | "provider_rejected" | "provider_timeout",
+    public readonly requestId: string,
   ) {
     super(message);
     this.name = "BraleApiError";
@@ -60,11 +79,121 @@ export class BraleService {
       clientId: config.clientId ?? requiredEnv("BRALE_CLIENT_ID"),
       clientSecret: config.clientSecret ?? requiredEnv("BRALE_CLIENT_SECRET"),
       accountId: config.accountId ?? requiredEnv("BRALE_ACCOUNT_ID"),
-      apiUrl: config.apiUrl ?? process.env["BRALE_API_URL"] ?? "https://api.brale.xyz",
-      authUrl: config.authUrl ?? process.env["BRALE_AUTH_URL"] ?? "https://auth.brale.xyz/oauth2/token",
+      apiUrl: config.apiUrl ?? requiredEnv("BRALE_API_URL"),
+      authUrl: config.authUrl ?? requiredEnv("BRALE_AUTH_URL"),
       stablecoin: config.stablecoin ?? process.env["BRALE_STABLECOIN"] ?? "SBC",
-      transferType:
-        config.transferType ?? process.env["BRALE_TESTNET_TRANSFER_TYPE"] ?? "solana_devnet",
+      network: config.network ?? requiredEnv("BRALE_NETWORK"),
+      // Keep a provider outage from occupying an HTTP request indefinitely.
+      requestTimeoutMs: config.requestTimeoutMs ?? timeoutFromEnv("BRALE_REQUEST_TIMEOUT_MS", 8_000),
+    };
+  }
+
+  /** Verifies required server-only configuration without requesting a token. */
+  static validateEnvironment() {
+    new BraleService();
+  }
+
+  /**
+   * Creates (once) a Brale managed account and selects its auto-created
+   * internal custodial address for the configured network. Brale models an
+   * internal wallet as an Address, so address ID is also the wallet ID unless
+   * a future provider response exposes a distinct wallet_id.
+   */
+  async provisionManagedWallet(input: ManagedWalletProvisioningInput): Promise<ManagedWalletProvisioningResult> {
+    let accountId = input.existingAccountId ?? undefined;
+    if (!accountId) {
+      const account = asObject(await this.request("/accounts", {
+        method: "POST",
+        headers: { "Idempotency-Key": input.idempotencyKey },
+        body: JSON.stringify(this.managedAccountRequest(input)),
+      }));
+      if (typeof account["id"] !== "string") {
+        throw new BraleApiError("Brale did not return an account identifier.", 502, "provider_rejected", randomUUID());
+      }
+      accountId = account["id"];
+    }
+
+    const response = asObject(await this.request(
+      `/accounts/${encodeURIComponent(accountId)}/addresses`,
+      { method: "GET" },
+      true,
+    ));
+    const addresses = Array.isArray(response["addresses"]) ? response["addresses"] : [];
+    for (const value of addresses) {
+      const address = asObject(value);
+      const transferTypes = Array.isArray(address["transfer_types"])
+        ? address["transfer_types"].filter((type): type is string => typeof type === "string")
+        : [];
+      if (typeof address["id"] !== "string" || typeof address["address"] !== "string" || !transferTypes.includes(this.config.network)) continue;
+      const walletId = typeof address["wallet_id"] === "string" ? address["wallet_id"] : address["id"];
+      return {
+        braleAccountId: accountId,
+        braleWalletId: walletId,
+        braleAddressId: address["id"],
+        blockchainAddress: address["address"],
+        blockchainNetwork: this.config.network,
+      };
+    }
+    throw new BraleApiError("No compatible custodial address is available.", 502, "provider_rejected", randomUUID());
+  }
+
+  /**
+   * Brale provisions internal custodial Addresses for an Account. For platform
+   * custody, select the configured Solana testnet Address; no user wallet is created.
+   */
+  /** Returns the platform's active internal custodial address for the configured network. */
+  async getPlatformCustodialAddress() {
+    const response = asObject(await this.request(
+      `/accounts/${encodeURIComponent(this.config.accountId)}/addresses`,
+      { method: "GET" },
+      true,
+    ));
+    const addresses = Array.isArray(response["addresses"]) ? response["addresses"] : [];
+    for (const value of addresses) {
+      const address = asObject(value);
+      const transferTypes = Array.isArray(address["transfer_types"])
+        ? address["transfer_types"].filter((type): type is string => typeof type === "string")
+        : [];
+      if (
+        typeof address["id"] === "string"
+        && typeof address["address"] === "string"
+        && transferTypes.includes(this.config.network)
+      ) {
+        return {
+          braleAccountId: this.config.accountId,
+          braleAddressId: address["id"],
+          blockchainAddress: address["address"],
+          blockchainNetwork: this.config.network,
+        };
+      }
+    }
+    throw new BraleApiError(
+      `No active platform custodial address supports ${this.config.network}. Enable that network for the Brale account or configure a supported network.`,
+      502,
+      "provider_rejected",
+      randomUUID(),
+    );
+  }
+
+  private managedAccountRequest(input: ManagedWalletProvisioningInput): JsonObject {
+    const template = process.env["BRALE_MANAGED_ACCOUNT_TEMPLATE_JSON"];
+    if (!template) {
+      throw new BraleApiError("Managed-account provisioning is not configured.", 503, "provider_unavailable", randomUUID());
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(template) as unknown;
+    } catch {
+      throw new BraleApiError("Managed-account provisioning is not configured.", 503, "provider_unavailable", randomUUID());
+    }
+    const request = asObject(parsed);
+    // Account creation requires compliance-approved KYC/KYB data which is
+    // intentionally server-side. Only ordinary registration identity fields
+    // are populated from this request.
+    return {
+      ...request,
+      name: `RewLo Fan ${input.firstName} ${input.lastName}`,
+      email: input.email,
     };
   }
 
@@ -83,7 +212,7 @@ export class BraleService {
       destination: {
         address_id: input.destinationAddressId,
         value_type: input.stablecoin ?? this.config.stablecoin,
-        transfer_type: input.transferType ?? this.config.transferType,
+        transfer_type: input.transferType ?? this.config.network,
       },
     };
     return this.runTransfer({ userId: input.userId, type: "mint", reference, amount: body.amount, request: body }, body);
@@ -102,7 +231,7 @@ export class BraleService {
   }): Promise<unknown> {
     const reference = input.idempotencyKey ?? randomUUID();
     const valueType = input.stablecoin ?? this.config.stablecoin;
-    const transferType = input.transferType ?? this.config.transferType;
+    const transferType = input.transferType ?? this.config.network;
     const body = {
       amount: normalizeMoney(input.amount),
       source: { address_id: input.sourceAddressId, value_type: valueType, transfer_type: transferType },
@@ -136,7 +265,7 @@ export class BraleService {
       source: {
         address_id: input.sourceAddressId,
         value_type: input.stablecoin ?? this.config.stablecoin,
-        transfer_type: input.transferType ?? this.config.transferType,
+        transfer_type: input.transferType ?? this.config.network,
       },
       destination,
     };
@@ -151,12 +280,12 @@ export class BraleService {
   }): Promise<unknown> {
     const query = new URLSearchParams({
       value_type: input.stablecoin ?? this.config.stablecoin,
-      transfer_type: input.transferType ?? this.config.transferType,
+      transfer_type: input.transferType ?? this.config.network,
     });
     const request = { addressId: input.addressId, query: Object.fromEntries(query) };
     return this.runOperation(
       { userId: input.userId, type: "balance_check", reference: randomUUID(), request },
-      () => this.request(`/accounts/${encodeURIComponent(this.config.accountId)}/addresses/${encodeURIComponent(input.addressId)}/balance?${query}`),
+      () => this.request(`/accounts/${encodeURIComponent(this.config.accountId)}/addresses/${encodeURIComponent(input.addressId)}/balance?${query}`, { method: "GET" }, true),
     );
   }
 
@@ -164,7 +293,7 @@ export class BraleService {
     const request = { transactionId: input.transactionId };
     return this.runOperation(
       { userId: input.userId, type: "status_check", reference: randomUUID(), request },
-      () => this.request(`/accounts/${encodeURIComponent(this.config.accountId)}/transfers/${encodeURIComponent(input.transactionId)}`),
+      () => this.request(`/accounts/${encodeURIComponent(this.config.accountId)}/transfers/${encodeURIComponent(input.transactionId)}`, { method: "GET" }, true),
     );
   }
 
@@ -185,7 +314,7 @@ export class BraleService {
       return response;
     } catch (error) {
       const response = error instanceof BraleApiError
-        ? { statusCode: error.statusCode, body: error.response }
+        ? { statusCode: error.statusCode, code: error.code, requestId: error.requestId }
         : { error: error instanceof Error ? error.message : "Unknown Brale error" };
       await this.storeResponse(context, response, "failed");
       throw error;
@@ -209,27 +338,53 @@ export class BraleService {
     });
   }
 
-  private async request(path: string, init: RequestInit = {}): Promise<unknown> {
+  private async request(path: string, init: RequestInit = {}, retrySafe = false): Promise<unknown> {
     const token = await this.getAccessToken();
-    const response = await fetch(`${this.config.apiUrl.replace(/\/$/, "")}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...init.headers },
-    });
-    const data = await parseResponse(response);
-    if (!response.ok) throw new BraleApiError(`Brale request failed with HTTP ${response.status}`, response.status, data);
-    return data;
+    const requestId = randomUUID();
+    const url = `${this.config.apiUrl.replace(/\/$/, "")}${path}`;
+    const attempts = retrySafe ? 2 : 1;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        const response = await fetchWithTimeout(url, {
+          ...init,
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-Request-ID": requestId, ...init.headers },
+        }, this.config.requestTimeoutMs);
+        const data = await parseResponse(response);
+        if (response.ok) return data;
+        if (retrySafe && attempt === 0 && (response.status === 408 || response.status === 429 || response.status >= 500)) continue;
+        throw new BraleApiError("Brale request was rejected.", response.status, response.status >= 500 ? "provider_unavailable" : "provider_rejected", requestId);
+      } catch (error) {
+        if (error instanceof BraleApiError) throw error;
+        if (retrySafe && attempt === 0) continue;
+        const timeout = error instanceof Error && error.name === "AbortError";
+        throw new BraleApiError(timeout ? "Brale request timed out." : "Brale request is unavailable.", 502, timeout ? "provider_timeout" : "provider_unavailable", requestId);
+      }
+    }
+    throw new BraleApiError("Brale request is unavailable.", 502, "provider_unavailable", requestId);
   }
 
   private async getAccessToken(): Promise<string> {
     if (this.accessToken && this.accessToken.expiresAt > Date.now() + 60_000) return this.accessToken.value;
     const basic = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString("base64");
-    const response = await fetch(this.config.authUrl, {
-      method: "POST",
-      headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
-      body: "grant_type=client_credentials",
-    });
+    const requestId = randomUUID();
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(this.config.authUrl, {
+        method: "POST",
+        headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=client_credentials",
+      }, this.config.requestTimeoutMs);
+    } catch (error) {
+      const timeout = error instanceof Error && error.name === "AbortError";
+      throw new BraleApiError(
+        timeout ? "Brale authentication timed out." : "Brale authentication is unavailable.",
+        502,
+        timeout ? "provider_timeout" : "provider_unavailable",
+        requestId,
+      );
+    }
     const data = await parseResponse(response);
-    if (!response.ok) throw new BraleApiError("Brale authentication failed", response.status, data);
+    if (!response.ok) throw new BraleApiError("Brale authentication failed", response.status, response.status >= 500 ? "provider_unavailable" : "provider_rejected", requestId);
     const auth = asObject(data);
     if (typeof auth["access_token"] !== "string") throw new Error("Brale authentication response did not include access_token");
     const expiresIn = typeof auth["expires_in"] === "number" ? auth["expires_in"] : 3600;
@@ -242,6 +397,13 @@ function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`${name} must be set on the Node.js backend`);
   return value;
+}
+
+function timeoutFromEnv(name: string, fallback: number): number {
+  const value = Number(process.env[name]);
+  // A bounded, sane range prevents accidental values such as 0 or several
+  // minutes from leaving an interactive payment action unresolved.
+  return Number.isFinite(value) && value >= 1_000 && value <= 30_000 ? Math.floor(value) : fallback;
 }
 
 function normalizeMoney(money: Money): Required<Money> {
@@ -288,6 +450,16 @@ async function parseResponse(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
   try { return JSON.parse(text) as unknown; } catch { return { raw: text }; }
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export default BraleService;

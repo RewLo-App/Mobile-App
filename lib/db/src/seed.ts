@@ -62,6 +62,7 @@ const demoOffers = [
 ] as const;
 
 const cardProviders = ["Visa", "Mastercard", "Visa", "Mastercard"] as const;
+const demoUserRewloPoints = 2_350;
 const cardLastFour = ["4821", "7394", "1048", "6612", "9035", "2576", "8140", "3906", "5268", "1479"] as const;
 const transactionTypes = [
   "top_up", "send", "receive", "reward", "redeem",
@@ -74,7 +75,7 @@ async function seed() {
     await tx.insert(rolesTable).values([{ name: "Fan" }, { name: "Merchant" }]).onConflictDoNothing();
     const [fanRole] = await tx.select().from(rolesTable).where(eq(rolesTable.name, "Fan"));
     if (!fanRole) throw new Error("Fan role was not created");
-    await tx.insert(appSettingsTable).values({key:"welcome_points",value:"500"}).onConflictDoUpdate({target:appSettingsTable.key,set:{value:"500"}});
+    await tx.insert(appSettingsTable).values({key:"welcome_points",value:"2350"}).onConflictDoUpdate({target:appSettingsTable.key,set:{value:"2350"}});
     const categoryNames=[...new Set(demoOffers.map(o=>o[0]))];
     const categories=await Promise.all(categoryNames.map(async name=>(await tx.insert(offerCategoriesTable).values({name,icon:"pricetag-outline"}).onConflictDoUpdate({target:offerCategoriesTable.name,set:{icon:"pricetag-outline"}}).returning())[0]));
     await tx.delete(offerRedemptionsTable);
@@ -93,7 +94,7 @@ async function seed() {
     );
 
     const userRows = await Promise.all(
-      demoUsers.map(async ([firstName, lastName, email, phoneNumber, primaryClubId, rewloCashBalance, rewloRewardPoints]) => {
+      demoUsers.map(async ([firstName, lastName, email, phoneNumber, primaryClubId, rewloCashBalance]) => {
         const [user] = await tx
           .insert(usersTable)
           .values({
@@ -103,14 +104,16 @@ async function seed() {
             phoneNumber,
             roleId: fanRole.id,
             rewloCashBalance,
-            rewloRewardPoints,
+            normalizedEmail: email.toLowerCase(),
+            passwordHash: "demo-users-require-a-real-password-hash",
+            rewloPoints: demoUserRewloPoints,
             primaryClubId,
             followedClubIds: JSON.stringify([primaryClubId]),
-            zip: "10001",
+            zipCode: "10001",
           })
           .onConflictDoUpdate({
             target: usersTable.email,
-            set: { firstName, lastName, phoneNumber, roleId: fanRole.id, rewloCashBalance, rewloRewardPoints, primaryClubId },
+            set: { firstName, lastName, phoneNumber, roleId: fanRole.id, rewloCashBalance, rewloPoints: demoUserRewloPoints, primaryClubId },
           })
           .returning();
         return user;

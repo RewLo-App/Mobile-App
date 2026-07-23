@@ -141,7 +141,7 @@ function SettingRow({ icon, label, value, onPress, showArrow = true, danger, tog
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, logout, deleteAccount, rewloPoints, transactions, selectedClubId } = useWallet();
+  const { user, logout, deleteAccount, rewloPoints, totalSpend, transactions, selectedClubId } = useWallet();
   const selectedClub = getClubById(selectedClubId);
 
   const [biometrics, setBiometrics] = useState(true);
@@ -160,10 +160,11 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: async () => { await logout(); router.replace("/login"); } },
-    ]);
+    // React Native Alert is not consistently interactive on web. Sign out
+    // immediately: local tokens/state are cleared by the context, while the
+    // backend refresh-token revocation continues in the background.
+    void logout();
+    router.replace("/login");
   };
 
   const handleDeleteAccount = () => {
@@ -183,10 +184,6 @@ export default function ProfileScreen() {
       ]
     );
   };
-
-  const totalSpend = Math.abs(
-    transactions.filter((t) => t.amount < 0).reduce((sum, t) => sum + t.amount, 0)
-  );
 
   const filteredTx = transactions.filter((tx) => {
     if (txFilter === "All") return true;
@@ -227,7 +224,7 @@ export default function ProfileScreen() {
         </View>
         <View style={styles.statsRow}>
           {[
-            { label: "Member Since", value: user?.memberSince ?? "2024" },
+            { label: "Member Since", value: user?.memberSince || "—" },
             { label: "Rewlo Pts", value: rewloPoints.toLocaleString() },
             { label: "Total Spend", value: `$${totalSpend.toFixed(0)}` },
           ].map((s) => (

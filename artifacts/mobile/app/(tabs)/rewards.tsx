@@ -13,10 +13,12 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ApiErrorDialog } from "@/components/ApiErrorDialog";
 import ClubBadge from "@/components/ClubBadge";
 import { getClubById } from "@/constants/clubs";
 import { Offer, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import { apiErrorMessage } from "@/utils/walletApi";
 
 const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   Sports: "football-outline",
@@ -114,9 +116,19 @@ function OfferCard({ item, onRedeem, canAfford }: OfferCardProps) {
 export default function RewardsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { rewloPoints, offers, redeemOffer, refreshWallet, transactions, followedClubIds, selectedClubId } = useWallet();
+  const { rewloPoints, rewardStats, offers, redeemOffer, refreshWallet, transactions, followedClubIds, selectedClubId } = useWallet();
   const [filter, setFilter] = useState<string>("All");
-  useEffect(() => { refreshWallet().catch(() => {}); }, [refreshWallet]);
+  const [redemptionError, setRedemptionError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const loadCatalog = async () => {
+    setCatalogLoading(true);
+    setCatalogError(null);
+    try { await refreshWallet(); }
+    catch (error) { setCatalogError(apiErrorMessage(error, "Could not load offers.")); }
+    finally { setCatalogLoading(false); }
+  };
+  useEffect(() => { void loadCatalog(); }, [refreshWallet]);
 
   const categories = ["All", ...Array.from(new Set(offers.map((offer) => offer.category)))];
   const filtered = filter === "All" ? offers : offers.filter((o) => o.category === filter);
@@ -141,12 +153,13 @@ export default function RewardsScreen() {
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     try { await redeemOffer(id); }
-    catch (error) { Alert.alert("Redemption failed", error instanceof Error ? error.message : "Please try again."); }
+    catch (error) { setRedemptionError(apiErrorMessage(error, "Please try again.")); }
   };
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   return (
+    <>
     <FlatList
       data={filtered}
       keyExtractor={(o) => o.id}
@@ -180,9 +193,9 @@ export default function RewardsScreen() {
             {/* Stats Row */}
             <View style={styles.statsRow}>
               {[
-                { label: "Points Earned", value: "3,850", icon: "arrow-up" as keyof typeof Ionicons.glyphMap },
-                { label: "Points Spent", value: "1,500", icon: "arrow-down" as keyof typeof Ionicons.glyphMap },
-                { label: "Offers Used", value: offers.filter(o => o.redeemed).length.toString(), icon: "checkmark" as keyof typeof Ionicons.glyphMap },
+                { label: "Points Earned", value: rewardStats.pointsEarned.toLocaleString(), icon: "arrow-up" as keyof typeof Ionicons.glyphMap },
+                { label: "Points Spent", value: rewardStats.pointsSpent.toLocaleString(), icon: "arrow-down" as keyof typeof Ionicons.glyphMap },
+                { label: "Offers Used", value: rewardStats.offersUsed.toLocaleString(), icon: "checkmark" as keyof typeof Ionicons.glyphMap },
               ].map((s) => (
                 <View key={s.label} style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <Ionicons name={s.icon} size={14} color={colors.primary} />
@@ -416,7 +429,21 @@ export default function RewardsScreen() {
           />
         </View>
       )}
+      ListEmptyComponent={
+        <View style={styles.catalogState}>
+          <Text style={{ color: colors.mutedForeground, textAlign: "center" }}>
+            {catalogLoading ? "Loading offers…" : catalogError ?? "No offers are available right now."}
+          </Text>
+          {catalogError && (
+            <Pressable onPress={() => void loadCatalog()} style={[styles.retryButton, { backgroundColor: colors.primary }]}>
+              <Text style={styles.retryText}>Try again</Text>
+            </Pressable>
+          )}
+        </View>
+      }
     />
+    <ApiErrorDialog message={redemptionError} onClose={() => setRedemptionError(null)} title="Redemption failed" />
+    </>
   );
 }
 
@@ -480,6 +507,9 @@ const styles = StyleSheet.create({
   offerExpiry: { fontSize: 12, fontFamily: "Inter_400Regular" },
   redeemBtn: { borderRadius: 14, paddingVertical: 13, alignItems: "center", marginTop: 4 },
   redeemBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  catalogState: { paddingHorizontal: 20, paddingTop: 26, alignItems: "center", gap: 14 },
+  retryButton: { height: 42, paddingHorizontal: 22, borderRadius: 12, justifyContent: "center" },
+  retryText: { color: "#fff", fontFamily: "Inter_700Bold" },
   clubLoyaltyCard: { marginHorizontal: 20, borderRadius: 20, borderWidth: 1, overflow: "hidden", marginBottom: 4 },
   clubLoyaltyRow: { flexDirection: "row", alignItems: "center", padding: 16, gap: 16 },
   clubLoyaltyInfo: { flex: 1, gap: 5 },
