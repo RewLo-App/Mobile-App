@@ -161,7 +161,6 @@ export default function OnboardingScreen() {
     const followed = [primaryClubId!, ...(followsOther && otherClubId ? [otherClubId] : [])];
     try {
       configureAuthClient();
-      console.log("Creating account at:", process.env.EXPO_PUBLIC_API_URL);
       const registration = await register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
