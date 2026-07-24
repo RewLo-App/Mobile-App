@@ -38,13 +38,13 @@ export default function TopUp() {
       .then(async (x) => {
         const availableCards = x.cards.length > 0
           ? x.cards
-          : [(await walletRequest<{ card: Card }>("/api/wallet/cards/demo", { method: "POST" })).card];
+          : [(await walletRequest<{ card: Card }>("/api/wallet/cards/provision", { method: "POST" })).card];
         setCards(availableCards);
         setSelected(
-          availableCards.find((y) => y.isDefault)?.id ?? availableCards[0]?.id ?? null,
+          availableCards.find((card) => card.isDefault)?.id ?? availableCards[0]?.id ?? null,
         );
       })
-      .catch((e) => setError(apiErrorMessage(e, "Could not load the demo card")));
+      .catch((e) => setError(apiErrorMessage(e, "Could not load your payment cards")));
   }, []);
   const value = Number(amount),
     valid = value > 0 && Number.isFinite(value),
@@ -89,9 +89,6 @@ export default function TopUp() {
             </Text>
             <Text style={[s.amountText, { color: c.foreground }]}>
               ${value.toFixed(2)}
-            </Text>
-            <Text selectable style={{ color: c.mutedForeground }}>
-              Reference {done}
             </Text>
             <Button label="Done" onPress={() => router.back()} />
           </View>
@@ -147,13 +144,13 @@ export default function TopUp() {
               />
             </View>
             <Text style={[s.note, { color: c.mutedForeground }]}>
-              Demo card only · Brale Base Sepolia
+              Use your Rewlo Premium card to add funds securely.
             </Text>
             <Button
               disabled={!canSubmit || loading}
               label={
                 loading
-                  ? "Minting…"
+                  ? "Processing…"
                   : confirm
                     ? `Confirm $${value.toFixed(2)}`
                     : "Continue"

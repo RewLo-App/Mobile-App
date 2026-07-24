@@ -252,6 +252,18 @@ router.post("/auth/logout", requireAuth, async (req: AuthenticatedRequest, res) 
   res.status(204).end();
 });
 
+router.delete("/auth/account", requireAuth, async (req: AuthenticatedRequest, res) => {
+  const userId = req.auth!.userId;
+  // User-owned wallet records, cards, reward activity, reset tokens, and
+  // sessions are foreign-keyed with ON DELETE CASCADE. Deleting the account in
+  // one transaction therefore removes the associated application data and
+  // invalidates every active session.
+  await db.transaction(async (tx) => {
+    await tx.delete(usersTable).where(eq(usersTable.id, userId));
+  });
+  res.status(200).json({ deleted: true });
+});
+
 router.get("/auth/me", requireAuth, async (req: AuthenticatedRequest, res) => {
   const [user] = await db.select({
     id: usersTable.id, firstName: usersTable.firstName, lastName: usersTable.lastName,

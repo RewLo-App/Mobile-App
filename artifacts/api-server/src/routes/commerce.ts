@@ -162,12 +162,15 @@ router.get("/wallet/cards", async (req: AuthenticatedRequest, res) => {
   });
 });
 
-// Sandbox-only payment instrument for the demo top-up flow. No real card
-// details are accepted or stored; the subsequent top-up mints on Brale testnet.
-router.post("/wallet/cards/demo", async (req: AuthenticatedRequest, res) => {
+// Every wallet receives a branded Rewlo Premium card record. This is a product
+// card, not a payment-card substitute: no PAN, CVV, or external card data is
+// created or stored here.
+router.post("/wallet/cards/provision", async (req: AuthenticatedRequest, res) => {
   const id = authenticatedUserId(req)!;
   if (!id) { res.status(401).json({ error: "User identity is required" }); return; }
-  const [existing] = await db.select().from(userCardsTable).where(eq(userCardsTable.userId, id)).limit(1);
+
+  const [existing] = await db.select().from(userCardsTable)
+    .where(eq(userCardsTable.userId, id)).limit(1);
   if (existing) { res.json({ card: existing }); return; }
 
   const [user] = await db.select({ firstName: usersTable.firstName, lastName: usersTable.lastName })
@@ -176,11 +179,11 @@ router.post("/wallet/cards/demo", async (req: AuthenticatedRequest, res) => {
 
   const [card] = await db.insert(userCardsTable).values({
     userId: id,
-    cardHolder: [user.firstName, user.lastName].filter(Boolean).join(" ").toUpperCase() || "REWLO FAN",
-    last4Digits: "4242",
-    expiry: "12/30",
-    cardType: "Demo",
-    provider: "Visa",
+    cardHolder: [user.firstName, user.lastName].filter(Boolean).join(" ").toUpperCase() || "REWLO MEMBER",
+    last4Digits: "XXXX",
+    expiry: "11/27",
+    cardType: "REWLO PREMIUM",
+    provider: "Mastercard",
     isDefault: true,
   }).returning();
   res.status(201).json({ card });
@@ -267,7 +270,7 @@ router.post("/wallet/top-up", async (req: AuthenticatedRequest, res) => {
           reference: `${reference}:topup`,
           externalTransactionId: externalId(brale),
           description: `Top up · ${card.provider} •••• ${card.last4Digits}`,
-          metadata: { provider: "brale", demoCard: true, braleResponse: brale },
+          metadata: { provider: "brale", braleResponse: brale },
         });
       return {
         reference,

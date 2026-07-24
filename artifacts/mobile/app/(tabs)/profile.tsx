@@ -7,6 +7,7 @@ import {
   Alert,
   Animated,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -146,6 +147,8 @@ export default function ProfileScreen() {
 
   const [biometrics, setBiometrics] = useState(true);
   const [notifications, setNotifications] = useState(true);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [txFilter, setTxFilter] = useState<FilterType>("All");
   const chevronAnim = useRef(new Animated.Value(0)).current;
@@ -167,22 +170,21 @@ export default function ProfileScreen() {
     router.replace("/login");
   };
 
+  const performAccountDeletion = async () => {
+    if (deletingAccount) return;
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      router.replace("/login");
+    } catch {
+      Alert.alert("Unable to delete account", "Please check your connection and try again.");
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This permanently deletes your account and all associated data from this device. This cannot be undone.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deleteAccount();
-            router.replace("/onboarding");
-          },
-        },
-      ]
-    );
+    setDeleteConfirmVisible(true);
   };
 
   const filteredTx = transactions.filter((tx) => {
@@ -199,6 +201,7 @@ export default function ProfileScreen() {
   const chevronRotate = chevronAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "90deg"] });
 
   return (
+    <>
     <ScrollView
       style={{ backgroundColor: colors.background }}
       showsVerticalScrollIndicator={false}
@@ -343,7 +346,7 @@ export default function ProfileScreen() {
       <View style={[styles.section, { marginTop: 22 }]}>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <SettingRow icon="log-out-outline" label="Sign Out" onPress={handleLogout} showArrow={false} danger />
-          <SettingRow icon="trash-outline" label="Delete Account" onPress={handleDeleteAccount} showArrow={false} danger noBorder />
+          <SettingRow icon="trash-outline" label={deletingAccount ? "Deleting Account…" : "Delete Account"} onPress={handleDeleteAccount} showArrow={false} danger noBorder />
         </View>
       </View>
 
@@ -351,6 +354,24 @@ export default function ProfileScreen() {
         RewLo v1.0.0 · Early Access Preview
       </Text>
     </ScrollView>
+    <Modal visible={deleteConfirmVisible} transparent animationType="fade" onRequestClose={() => setDeleteConfirmVisible(false)}>
+      <View style={styles.deleteOverlay}>
+        <View style={[styles.deleteDialog, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Ionicons name="warning-outline" size={30} color={colors.destructive} />
+          <Text style={[styles.deleteTitle, { color: colors.foreground }]}>Delete account?</Text>
+          <Text style={[styles.deleteMessage, { color: colors.mutedForeground }]}>This can’t be undone.</Text>
+          <View style={styles.deleteActions}>
+            <Pressable onPress={() => setDeleteConfirmVisible(false)} style={[styles.deleteButton, { borderColor: colors.border }]}>
+              <Text style={[styles.deleteButtonText, { color: colors.foreground }]}>Cancel</Text>
+            </Pressable>
+            <Pressable onPress={() => { setDeleteConfirmVisible(false); void performAccountDeletion(); }} style={[styles.deleteButton, { backgroundColor: colors.destructive }]}>
+              <Text style={[styles.deleteButtonText, { color: "#fff" }]}>Delete</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -393,5 +414,12 @@ const styles = StyleSheet.create({
   pendingText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   emptyPanel: { alignItems: "center", paddingVertical: 28, gap: 8 },
   emptyText: { fontSize: 14, fontFamily: "Inter_500Medium" },
+  deleteOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 24 },
+  deleteDialog: { width: "100%", maxWidth: 360, borderRadius: 20, borderWidth: 1, padding: 24, alignItems: "center", gap: 10 },
+  deleteTitle: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  deleteMessage: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center" },
+  deleteActions: { flexDirection: "row", gap: 12, width: "100%", marginTop: 14 },
+  deleteButton: { flex: 1, minHeight: 46, borderRadius: 12, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  deleteButtonText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   version: { textAlign: "center", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 24, marginBottom: 8 },
 });

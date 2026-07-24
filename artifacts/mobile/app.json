@@ -3,6 +3,7 @@
     "name": "RewLo",
     "slug": "rewlo",
     "version": "1.0.0",
+    "description": "RewLo is a sports fan wallet for rewards, wallet activity, and participating merchant payments. QR scanning is used only to scan participating merchant payment and reward codes.",
     "orientation": "portrait",
     "icon": "./assets/images/rewlo-appicon.png",
     "scheme": "rewlo",

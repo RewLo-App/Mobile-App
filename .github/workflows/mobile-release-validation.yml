@@ -1,0 +1,41 @@
+name: Mobile release validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      # CI verifies wiring only. The actual production value is supplied by
+      # the EAS production environment during the signed build.
+      EXPO_PUBLIC_APP_ENV: production
+      EXPO_PUBLIC_API_URL: https://api.validation.rewlo.io
+      EAS_BUILD_PROFILE: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate production API configuration
+        run: node artifacts/mobile/scripts/validate-production-api-url.mjs
+
+      - name: Validate Expo configuration
+        run: pnpm --filter @workspace/mobile exec expo config --type public
+
+      - name: Type-check mobile app
+        run: pnpm --filter @workspace/mobile typecheck
+
+      - name: Type-check API server
+        run: pnpm --filter @workspace/api-server typecheck
