@@ -17,10 +17,14 @@ import type { CurrentUser, RegisterRequest } from "@workspace/api-client-react";
 
 const ACCESS_TOKEN_KEY = "rewlo_access_token";
 const REFRESH_TOKEN_KEY = "rewlo_refresh_token";
-// Prefer an explicit URL for local/mobile development. EXPO_PUBLIC_DOMAIN is
-// retained for hosted Replit deployments where the scheme is always HTTPS.
-const API_BASE = process.env.EXPO_PUBLIC_API_URL
+// Production builds receive this from the EAS "production" environment. Do
+// not add a localhost fallback here: a released iOS app cannot reach it.
+const API_BASE = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "")
   ?? (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : null);
+
+if (process.env.EXPO_PUBLIC_APP_ENV === "production" && (!API_BASE || !API_BASE.startsWith("https://"))) {
+  throw new Error("A secure EXPO_PUBLIC_API_URL is required for production builds.");
+}
 
 // expo-secure-store is native-only in this setup. On web, use the browser's
 // storage so registration and session restoration can still make API calls.

@@ -128,8 +128,8 @@ async function seed() {
         cardHolder: `${user.firstName} ${user.lastName}`.toUpperCase(),
         last4Digits: cardLastFour[index % cardLastFour.length],
         expiry: `${String((index % 12) + 1).padStart(2, "0")}/${27 + (index % 4)}`,
-        cardType: "Debit",
-        provider: cardProviders[index % cardProviders.length],
+        cardType: "REWLO PREMIUM",
+        provider: "Mastercard",
         isDefault: true,
       })),
     );

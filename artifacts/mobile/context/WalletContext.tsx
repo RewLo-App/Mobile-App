@@ -98,7 +98,6 @@ interface WalletContextType {
   resetPassword: (token: string, newPassword: string) => Promise<boolean>;
   logout: () => Promise<void>;
   deleteAccount: () => Promise<void>;
-  completeOnboarding: (email: string, primaryClubId: string, clubIds: string[]) => Promise<void>;
   completeAuthenticatedRegistration: (currentUser: CurrentUser, primaryClubId: string, clubIds: string[]) => Promise<void>;
   sendMoney: (amount: number, recipient: string) => void;
   redeemOffer: (offerId: string) => Promise<void>;
@@ -118,6 +117,32 @@ type LedgerItem = {
   merchant: string | null;
   createdAt: string;
 };
+
+type WalletCardRecord = {
+  id: number;
+  last4Digits: string;
+  expiry: string;
+  cardType: string;
+  provider: string;
+  isDefault: boolean;
+  cardHolder: string;
+};
+
+function virtualCardFromRecord(card: WalletCardRecord): VirtualCard {
+  const [month = "0", year = "0"] = card.expiry.split("/");
+  return {
+    id: String(card.id),
+    last4: card.last4Digits,
+    brand: card.provider.toLowerCase() === "visa" ? "visa" : "mastercard",
+    expiryMonth: Number(month),
+    expiryYear: Number(year),
+    gradientStart: "#0B1F3A",
+    gradientEnd: "#1E4168",
+    clubName: card.cardType,
+    isDefault: card.isDefault,
+    cardholderName: card.cardHolder,
+  };
+}
 
 function transactionFromLedger(item: LedgerItem): Transaction {
   const type: Transaction["type"] =
@@ -149,173 +174,6 @@ function toWalletUser(currentUser: CurrentUser, clubId?: string): User {
   };
 }
 
-const MOCK_USER: User = {
-  id: "usr_001",
-  name: "Alex Johnson",
-  email: "alex@rewlo.io",
-  phone: "+1 (555) 0134",
-  club: "Manchester City",
-  memberSince: "Jan 2024",
-};
-
-const MOCK_TRANSACTIONS: Transaction[] = [
-  {
-    id: "tx_001",
-    type: "receive",
-    amount: 250.0,
-    description: "Match Day Bonus",
-    merchant: "Manchester City FC",
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-    clubTag: "MCFC",
-  },
-  {
-    id: "tx_002",
-    type: "payment",
-    amount: -45.5,
-    description: "Stadium Catering",
-    merchant: "Etihad Stadium",
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-    clubTag: "MCFC",
-  },
-  {
-    id: "tx_003",
-    type: "reward",
-    amount: 0,
-    description: "500 Rewlo Points Earned",
-    merchant: "Nike Store",
-    date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-  },
-  {
-    id: "tx_004",
-    type: "send",
-    amount: -120.0,
-    description: "Match Ticket",
-    merchant: "Ticketmaster",
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-  },
-  {
-    id: "tx_005",
-    type: "topup",
-    amount: 500.0,
-    description: "Wallet Top Up",
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-  },
-  {
-    id: "tx_006",
-    type: "payment",
-    amount: -28.99,
-    description: "Club Shop Purchase",
-    merchant: "MCFC Official Store",
-    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-    clubTag: "MCFC",
-  },
-  {
-    id: "tx_007",
-    type: "receive",
-    amount: 75.0,
-    description: "Referral Reward",
-    merchant: "Rewlo",
-    date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    status: "completed",
-  },
-];
-
-const MOCK_CARDS: VirtualCard[] = [
-  {
-    id: "card_001",
-    last4: "XXXX",
-    brand: "visa",
-    expiryMonth: 3,
-    expiryYear: 28,
-    gradientStart: "#1C2C5B",
-    gradientEnd: "#6CADDF",
-    clubName: "Manchester City",
-    isDefault: true,
-    cardholderName: "ALEX JOHNSON",
-  },
-  {
-    id: "card_002",
-    last4: "XXXX",
-    brand: "mastercard",
-    expiryMonth: 11,
-    expiryYear: 27,
-    gradientStart: "#0D1B2A",
-    gradientEnd: "#1C3A5C",
-    clubName: "Rewlo Premium",
-    isDefault: false,
-    cardholderName: "ALEX JOHNSON",
-  },
-];
-
-const MOCK_OFFERS: Offer[] = [
-  {
-    id: "off_001",
-    merchant: "Nike",
-    category: "Sports",
-    description: "20% off on all football boots",
-    discount: "20% OFF",
-    pointsCost: 500,
-    expiresAt: "2025-07-31",
-    redeemed: false,
-  },
-  {
-    id: "off_002",
-    merchant: "Adidas",
-    category: "Sports",
-    description: "Free jersey personalisation",
-    discount: "FREE",
-    pointsCost: 800,
-    expiresAt: "2025-07-15",
-    redeemed: false,
-  },
-  {
-    id: "off_003",
-    merchant: "Etihad Stadium",
-    category: "Stadium",
-    description: "Buy 2 get 1 free on food & drinks",
-    discount: "B2G1",
-    pointsCost: 300,
-    expiresAt: "2025-08-01",
-    redeemed: false,
-  },
-  {
-    id: "off_004",
-    merchant: "Sky Sports",
-    category: "Media",
-    description: "1 month free premium subscription",
-    discount: "1 MONTH FREE",
-    pointsCost: 1200,
-    expiresAt: "2025-06-30",
-    redeemed: false,
-  },
-  {
-    id: "off_005",
-    merchant: "Puma",
-    category: "Sports",
-    description: "15% off training gear",
-    discount: "15% OFF",
-    pointsCost: 400,
-    expiresAt: "2025-08-15",
-    redeemed: false,
-  },
-  {
-    id: "off_006",
-    merchant: "EA Sports FC",
-    category: "Gaming",
-    description: "5000 FIFA Points bonus",
-    discount: "5K POINTS",
-    pointsCost: 600,
-    expiresAt: "2025-07-20",
-    redeemed: false,
-  },
-];
-
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authenticatedUser, setAuthenticatedUser] = useState<CurrentUser | null>(null);
@@ -327,20 +185,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [balance, setBalance] = useState(0);
   const [totalSpend, setTotalSpend] = useState(0);
-  const [rewloPoints, setRewloPoints] = useState(2350);
+  const [rewloPoints, setRewloPoints] = useState(0);
   const [rewardStats, setRewardStats] = useState<RewardStats>({ pointsEarned: 0, pointsSpent: 0, offersUsed: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [cards, setCards] = useState<VirtualCard[]>(MOCK_CARDS);
+  const [cards, setCards] = useState<VirtualCard[]>([]);
   // Offers are provider-backed database records. Do not expose preview IDs
   // such as `off_001`, which cannot be redeemed by the API.
   const [offers, setOffers] = useState<Offer[]>([]);
   const [selectedClubId, setSelectedClubId] = useState(DEFAULT_CLUB_ID);
 
   const refreshWallet = useCallback(async () => {
-    const [summary, rewards, ledger] = await Promise.all([
+    const [summary, rewards, ledger, cardResponse] = await Promise.all([
       walletRequest<{ balanceCents: number; rewardPoints: number; totalSpendCents: number }>("/api/wallet/summary"),
       walletRequest<{ points: number; stats: RewardStats; offers: Array<{ id:number; merchant:string; category:string; description:string; discount:string; pointsCost:number; expiresAt:string; redeemed:boolean }> }>("/api/rewards"),
       walletRequest<{ items: LedgerItem[] }>("/api/wallet/transactions?page=1&pageSize=4"),
+      walletRequest<{ cards: WalletCardRecord[] }>("/api/wallet/cards"),
     ]);
     setBalance(summary.balanceCents / 100);
     setTotalSpend(summary.totalSpendCents / 100);
@@ -348,6 +207,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setRewardStats(rewards.stats);
     setOffers(rewards.offers.map(o => ({ ...o, id: String(o.id) })));
     setTransactions(ledger.items.map(transactionFromLedger));
+    const walletCards = cardResponse.cards.length > 0
+      ? cardResponse.cards
+      : [(await walletRequest<{ card: WalletCardRecord }>("/api/wallet/cards/provision", { method: "POST" })).card];
+    setCards(walletCards.map(virtualCardFromRecord));
   }, []);
 
   useEffect(() => {
@@ -365,20 +228,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.getItem("rewlo_club"),
       AsyncStorage.getItem("rewlo_followed_clubs"),
       AsyncStorage.getItem("rewlo_email"),
-    ]).then(async ([onboarded, auth, club, followed, email]) => {
-      const loggedIn = onboarded === "true" || auth === "true";
-      if (loggedIn) {
-        setIsOnboarded(true);
-        setIsAuthenticated(true);
-        setUser({ ...MOCK_USER, ...(email ? { email } : {}) });
-      }
+    ]).then(async ([, , club, followed]) => {
       if (club) setSelectedClubId(club);
       if (followed) {
         try { setFollowedClubIds(JSON.parse(followed)); } catch {}
       }
 
-      // A valid secure token is the source of truth when this device has used
-      // the API authentication flow. Legacy preview state remains supported.
+      // A valid secure token is the sole source of authenticated wallet state.
       try {
         const currentUser = await restoreAuthSession();
         if (!currentUser) return;
@@ -387,8 +243,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setAuthenticatedUser(currentUser);
         setUser(toWalletUser(currentUser, club ?? undefined));
       } catch {
-        // No token, an expired token, or an offline API must not prevent the
-        // existing onboarding preview state from loading.
+        // No token, an expired token, or an offline API leaves the user signed out.
       } finally { setIsRestoringSession(false); }
     });
     return () => setSessionExpiredHandler(null);
@@ -431,32 +286,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       )
     );
   }, []);
-
-  const completeOnboarding = useCallback(
-    async (email: string, primaryClubId: string, clubIds: string[]) => {
-      await AsyncStorage.multiSet([
-        ["rewlo_onboarded", "true"],
-        ["rewlo_auth", "true"],
-        ["rewlo_email", email],
-        ["rewlo_club", primaryClubId],
-        ["rewlo_followed_clubs", JSON.stringify(clubIds)],
-      ]);
-      setIsOnboarded(true);
-      setIsAuthenticated(true);
-      setFollowedClubIds(clubIds);
-      setSelectedClubId(primaryClubId);
-      setUser({ ...MOCK_USER, email });
-      const club = getClubById(primaryClubId);
-      setCards((prev) =>
-        prev.map((c) =>
-          c.isDefault
-            ? { ...c, gradientStart: club.gradientStart, gradientEnd: club.gradientEnd, clubName: club.name }
-            : c
-        )
-      );
-    },
-    []
-  );
 
   const completeAuthenticatedRegistration = useCallback(
     async (currentUser: CurrentUser, primaryClubId: string, clubIds: string[]) => {
@@ -553,7 +382,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
-    await logoutSession();
+    await walletRequest<{ deleted: boolean }>("/api/auth/account", { method: "DELETE" });
     await AsyncStorage.multiRemove([
       "rewlo_auth",
       "rewlo_onboarded",
@@ -569,10 +398,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     setFollowedClubIds([]);
     setBalance(0);
     setTotalSpend(0);
-    setRewloPoints(2350);
+    setRewloPoints(0);
     setRewardStats({ pointsEarned: 0, pointsSpent: 0, offersUsed: 0 });
     setTransactions([]);
-    setCards(MOCK_CARDS);
+    setCards([]);
     setOffers([]);
     setSelectedClubId(DEFAULT_CLUB_ID);
   }, []);
@@ -647,7 +476,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         logout,
         deleteAccount,
-        completeOnboarding,
         completeAuthenticatedRegistration,
         sendMoney,
         redeemOffer,

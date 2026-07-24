@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -616,12 +617,16 @@ function Step3({
           {errors.zip && <Text style={s.errText}>{errors.zip}</Text>}
         </View>
 
-        {/* Terms note */}
+        {/* Privacy notice */}
         <Text style={s.terms}>
-          By creating an account you agree to RewLo's{" "}
-          <Text style={{ color: PRIMARY }}>Terms of Service</Text>
-          {" "}and{" "}
-          <Text style={{ color: PRIMARY }}>Privacy Policy</Text>.
+          By creating an account, you agree to the{" "}
+          <Text
+            accessibilityRole="link"
+            onPress={() => void Linking.openURL("https://rewlo.io/privacy.html")}
+            style={{ color: PRIMARY }}
+          >
+            Privacy Policy
+          </Text>.
         </Text>
 
         {errors.form && <Text style={[s.errText, s.formError]}>{errors.form}</Text>}
