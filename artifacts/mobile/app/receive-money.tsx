@@ -1,0 +1,22 @@
+import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import { router } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import QRCode from "react-native-qrcode-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useColors } from "@/hooks/useColors";
+import { walletRequest } from "@/utils/walletApi";
+
+type ReceiveInfo = { email: string; walletIdentifier: string; qrValue: string };
+export default function ReceiveMoneyScreen() {
+  const colors=useColors(); const insets=useSafeAreaInsets(); const [info,setInfo]=useState<ReceiveInfo|null>(null); const [error,setError]=useState(""); const [copied,setCopied]=useState(false);
+  useEffect(()=>{walletRequest<ReceiveInfo>("/api/wallet/receive").then(setInfo).catch(e=>setError(e instanceof Error?e.message:"Could not load receiving details"))},[]);
+  async function copy(){if(!info)return;await Clipboard.setStringAsync(info.email);setCopied(true);setTimeout(()=>setCopied(false),1600)}
+  async function share(){if(!info)return;await Share.share({message:`Send me RewLo Cash using ${info.email}\n${info.qrValue}`})}
+  return <View style={[s.root,{backgroundColor:colors.background,paddingTop:insets.top}]}><View style={s.header}><Pressable onPress={()=>router.back()}><Ionicons name="arrow-back" size={24} color={colors.foreground}/></Pressable><Text style={[s.title,{color:colors.foreground}]}>Receive Money</Text><View style={{width:24}}/></View>
+    {!info&&!error&&<ActivityIndicator color={colors.primary} style={{marginTop:80}}/>}
+    {info&&<View style={s.content}><Text style={[s.heading,{color:colors.foreground}]}>Your RewLo code</Text><Text style={[s.sub,{color:colors.mutedForeground}]}>Let another fan scan this code to send you money</Text><View style={s.qrCard}><QRCode value={info.qrValue} size={210} backgroundColor="#FFFFFF" color="#041120"/></View><Text style={[s.label,{color:colors.mutedForeground}]}>RECEIVE USING EMAIL</Text><View style={[s.emailCard,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name="mail-outline" size={21} color={colors.primary}/><Text selectable style={[s.email,{color:colors.foreground}]}>{info.email}</Text><Pressable onPress={copy} style={[s.iconBtn,{backgroundColor:colors.secondary}]}><Ionicons name={copied?"checkmark":"copy-outline"} size={19} color={copied?colors.success:colors.foreground}/></Pressable></View><View style={s.actions}><Pressable onPress={copy} style={[s.action,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name={copied?"checkmark-circle":"copy-outline"} size={22} color={colors.primary}/><Text style={[s.actionText,{color:colors.foreground}]}>{copied?"Copied":"Copy"}</Text></Pressable><Pressable onPress={share} style={[s.action,{backgroundColor:colors.card,borderColor:colors.border}]}><Ionicons name="share-outline" size={22} color={colors.primary}/><Text style={[s.actionText,{color:colors.foreground}]}>Share</Text></Pressable></View><Text style={[s.note,{color:colors.mutedForeground}]}>Only share this receiving identifier with people you trust.</Text></View>}
+    {!!error&&<Text style={s.error}>{error}</Text>}</View>
+}
+const s=StyleSheet.create({root:{flex:1},header:{height:60,paddingHorizontal:20,flexDirection:"row",alignItems:"center",justifyContent:"space-between"},title:{fontSize:18,fontFamily:"Inter_700Bold"},content:{alignItems:"center",padding:24},heading:{fontSize:25,fontFamily:"Inter_700Bold",marginTop:14},sub:{fontSize:14,fontFamily:"Inter_400Regular",textAlign:"center",marginTop:7,marginBottom:25},qrCard:{padding:20,backgroundColor:"white",borderRadius:24,marginBottom:30},label:{fontSize:11,fontFamily:"Inter_600SemiBold",letterSpacing:1,alignSelf:"flex-start",marginBottom:9},emailCard:{width:"100%",minHeight:62,borderRadius:16,borderWidth:1,paddingHorizontal:15,flexDirection:"row",alignItems:"center",gap:10},email:{flex:1,fontSize:14,fontFamily:"Inter_600SemiBold"},iconBtn:{width:40,height:40,borderRadius:12,alignItems:"center",justifyContent:"center"},actions:{width:"100%",flexDirection:"row",gap:12,marginTop:16},action:{flex:1,height:54,borderRadius:15,borderWidth:1,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:8},actionText:{fontSize:14,fontFamily:"Inter_600SemiBold"},note:{fontSize:12,textAlign:"center",marginTop:25},error:{color:"#EF4444",textAlign:"center",margin:30}});

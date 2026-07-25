@@ -1,0 +1,11 @@
+ALTER TABLE "merchants" ADD COLUMN IF NOT EXISTS "brale_address_id" text;
+ALTER TABLE "merchants" ADD COLUMN IF NOT EXISTS "rewlo_cash_balance" integer NOT NULL DEFAULT 0;
+CREATE UNIQUE INDEX IF NOT EXISTS "merchants_brale_address_id_unique" ON "merchants" ("brale_address_id");
+CREATE TABLE IF NOT EXISTS "offer_categories" ("id" serial PRIMARY KEY, "name" text NOT NULL UNIQUE, "icon" text NOT NULL);
+CREATE TABLE IF NOT EXISTS "offers" ("id" serial PRIMARY KEY, "category_id" integer NOT NULL REFERENCES "offer_categories"("id"), "merchant" text NOT NULL, "title" text NOT NULL, "description" text NOT NULL, "discount_label" text NOT NULL, "points_required" integer NOT NULL, "redemption_value_cents" integer NOT NULL DEFAULT 100, "available" boolean NOT NULL DEFAULT true, "expires_at" timestamp with time zone NOT NULL, "created_at" timestamp with time zone NOT NULL DEFAULT now());
+CREATE TABLE IF NOT EXISTS "offer_redemptions" ("id" serial PRIMARY KEY, "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "offer_id" integer NOT NULL REFERENCES "offers"("id"), "points_spent" integer NOT NULL, "reference" text NOT NULL UNIQUE, "brale_transaction_id" text, "created_at" timestamp with time zone NOT NULL DEFAULT now());
+CREATE UNIQUE INDEX IF NOT EXISTS "offer_redemptions_user_offer_unique" ON "offer_redemptions" ("user_id","offer_id");
+CREATE TABLE IF NOT EXISTS "reward_transactions" ("id" serial PRIMARY KEY, "user_id" integer NOT NULL REFERENCES "users"("id") ON DELETE CASCADE, "points_delta" integer NOT NULL, "reason" text NOT NULL, "reference" text NOT NULL UNIQUE, "created_at" timestamp with time zone NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS "reward_transactions_user_created_idx" ON "reward_transactions" ("user_id","created_at");
+CREATE TABLE IF NOT EXISTS "app_settings" ("key" text PRIMARY KEY, "value" text NOT NULL);
+INSERT INTO "app_settings" ("key","value") VALUES ('welcome_points','500') ON CONFLICT ("key") DO NOTHING;

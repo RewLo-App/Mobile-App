@@ -2,12 +2,14 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Animated,
+  ActivityIndicator,
   FlatList,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -21,6 +23,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ClubBadge from "@/components/ClubBadge";
 import { Club, CLUB_LOGO_URLS, CLUBS, getClubById } from "@/constants/clubs";
 import { useWallet } from "@/context/WalletContext";
+import { configureAuthClient, loadCurrentUser, saveAuthTokens } from "@/utils/authSession";
+import { register } from "@workspace/api-client-react";
 
 // ── US-only leagues ───────────────────────────────────────────────
 const US_LEAGUES = ["NFL", "NBA", "MLB", "NHL", "MLS"] as const;
@@ -39,6 +43,12 @@ const BORDER = "rgba(255,255,255,0.10)";
 const MUTED = "#6B8BAE";
 const PRIMARY = "#2563EB";
 const WHITE = "#FFFFFF";
+
+function getApiErrorStatus(error: unknown): number | null {
+  if (!error || typeof error !== "object" || !("status" in error)) return null;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === "number" ? status : null;
+}
 
 // ── Progress bar ─────────────────────────────────────────────────
 function ProgressBar({ step }: { step: number }) {
@@ -75,7 +85,7 @@ function RewloLogo({ light = false }: { light?: boolean }) {
 // ═════════════════════════════════════════════════════════════════
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { completeOnboarding } = useWallet();
+  const { completeAuthenticatedRegistration } = useWallet();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -89,12 +99,15 @@ export default function OnboardingScreen() {
   const [otherClubId, setOtherClubId] = useState<string | null>(null);
 
   // Step 3 state
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [zip, setZip] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; zip?: string }>({});
+  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; email?: string; password?: string; zip?: string; form?: string }>({});
   const [loading, setLoading] = useState(false);
+  const isSubmitting = useRef(false);
 
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const btmPad = Platform.OS === "web" ? 24 : insets.bottom;
@@ -133,41 +146,49 @@ export default function OnboardingScreen() {
 
   const validateStep3 = () => {
     const e: typeof errors = {};
+    if (!firstName.trim()) e.firstName = "Enter your first name";
+    if (!lastName.trim()) e.lastName = "Enter your last name";
     if (!/\S+@\S+\.\S+/.test(email)) e.email = "Enter a valid email address";
-    if (password.length < 6) e.password = "Password must be at least 6 characters";
+    if (password.length < 12) e.password = "Use at least 12 characters";
     if (!/^\d{5}$/.test(zip)) e.zip = "Enter a valid 5-digit ZIP code";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleCreateAccount = async () => {
-    if (!validateStep3() || loading) return;
+    if (isSubmitting.current || !validateStep3()) return;
+    isSubmitting.current = true;
     setLoading(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const followed = [primaryClubId!, ...(followsOther && otherClubId ? [otherClubId] : [])];
-    await completeOnboarding(email, primaryClubId!, followed);
-
-    // Register user in DB + send welcome email (non-blocking)
-    const club = primaryClubId ? getClubById(primaryClubId) : null;
-    const apiBase = process.env.EXPO_PUBLIC_DOMAIN
-      ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
-      : "";
-    fetch(`${apiBase}/api/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        primaryClubId,
-        followedClubIds: followed,
-        zip,
-        teamName: club?.name ?? "your team",
-        gradientStart: club?.gradientStart ?? "#2563EB",
-        gradientEnd: club?.gradientEnd ?? "#041828",
-      }),
-    }).catch(() => {/* non-fatal */});
-
-    setLoading(false);
-    setStep(4);
+    try {
+      configureAuthClient();
+      const registration = await register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        password,
+        zipCode: zip,
+      });
+      await saveAuthTokens(registration.tokens.accessToken, registration.tokens.refreshToken);
+      const currentUser = await loadCurrentUser();
+      await completeAuthenticatedRegistration(currentUser, primaryClubId!, followed);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)/home");
+    } catch (error) {
+      console.error("Account registration failed:", error);
+      const status = getApiErrorStatus(error);
+      const message = status === 409
+        ? "An account with this email already exists."
+        : status === 400
+          ? "Please review the highlighted details."
+          : status === 503
+            ? "Registration is temporarily unavailable. Please try again."
+            : "We couldn’t create your account. Please try again.";
+      setErrors((current) => ({ ...current, form: message }));
+    } finally {
+      isSubmitting.current = false;
+      setLoading(false);
+    }
   };
 
   // ── Dynamic gradient based on selected primary club ───────────
@@ -214,6 +235,8 @@ export default function OnboardingScreen() {
         />}
 
         {step === 3 && <Step3
+          firstName={firstName} setFirstName={setFirstName}
+          lastName={lastName} setLastName={setLastName}
           email={email} setEmail={setEmail}
           password={password} setPassword={setPassword}
           zip={zip} setZip={setZip}
@@ -481,14 +504,16 @@ function Step2({
 // STEP 3 — Account creation
 // ═══════════════════════════════════════════════════════════════
 function Step3({
-  email, setEmail, password, setPassword, zip, setZip,
+  firstName, setFirstName, lastName, setLastName, email, setEmail, password, setPassword, zip, setZip,
   showPassword, setShowPassword, errors, loading, onSubmit, btmPad,
 }: {
+  firstName: string; setFirstName: (v: string) => void;
+  lastName: string; setLastName: (v: string) => void;
   email: string; setEmail: (v: string) => void;
   password: string; setPassword: (v: string) => void;
   zip: string; setZip: (v: string) => void;
   showPassword: boolean; setShowPassword: (v: boolean) => void;
-  errors: { email?: string; password?: string; zip?: string };
+  errors: { firstName?: string; lastName?: string; email?: string; password?: string; zip?: string; form?: string };
   loading: boolean;
   onSubmit: () => void;
   btmPad: number;
@@ -508,6 +533,25 @@ function Step3({
           <RewloLogo />
           <Text style={s.stepTitle}>Create your account</Text>
           <Text style={s.stepSub}>Almost there — just a few details</Text>
+        </View>
+
+        {/* Name */}
+        <View style={s.nameRow}>
+          <View style={s.nameField}>
+            <Text style={s.fieldLabel}>First Name</Text>
+            <View style={[s.inputWrap, errors.firstName ? s.inputError : null]}>
+              <Ionicons name="person-outline" size={18} color={MUTED} style={s.inputIcon} />
+              <TextInput style={s.input} placeholder="First name" placeholderTextColor={MUTED} value={firstName} onChangeText={setFirstName} autoCapitalize="words" returnKeyType="next" />
+            </View>
+            {errors.firstName && <Text style={s.errText}>{errors.firstName}</Text>}
+          </View>
+          <View style={s.nameField}>
+            <Text style={s.fieldLabel}>Last Name</Text>
+            <View style={[s.inputWrap, errors.lastName ? s.inputError : null]}>
+              <TextInput style={s.input} placeholder="Last name" placeholderTextColor={MUTED} value={lastName} onChangeText={setLastName} autoCapitalize="words" returnKeyType="next" />
+            </View>
+            {errors.lastName && <Text style={s.errText}>{errors.lastName}</Text>}
+          </View>
         </View>
 
         {/* Email */}
@@ -537,7 +581,7 @@ function Step3({
             <Ionicons name="lock-closed-outline" size={18} color={MUTED} style={s.inputIcon} />
             <TextInput
               style={s.input}
-              placeholder="Min. 6 characters"
+              placeholder="Min. 12 characters"
               placeholderTextColor={MUTED}
               value={password}
               onChangeText={setPassword}
@@ -573,13 +617,19 @@ function Step3({
           {errors.zip && <Text style={s.errText}>{errors.zip}</Text>}
         </View>
 
-        {/* Terms note */}
+        {/* Privacy notice */}
         <Text style={s.terms}>
-          By creating an account you agree to RewLo's{" "}
-          <Text style={{ color: PRIMARY }}>Terms of Service</Text>
-          {" "}and{" "}
-          <Text style={{ color: PRIMARY }}>Privacy Policy</Text>.
+          By creating an account, you agree to the{" "}
+          <Text
+            accessibilityRole="link"
+            onPress={() => void Linking.openURL("https://rewlo.io/privacy.html")}
+            style={{ color: PRIMARY }}
+          >
+            Privacy Policy
+          </Text>.
         </Text>
+
+        {errors.form && <Text style={[s.errText, s.formError]}>{errors.form}</Text>}
 
         {/* CTA */}
         <Pressable
@@ -589,6 +639,7 @@ function Step3({
             s.cta, { backgroundColor: PRIMARY, opacity: pressed || loading ? 0.85 : 1, marginTop: 8 },
           ]}
         >
+          {loading && <ActivityIndicator color={WHITE} />}
           <Text style={[s.ctaText, { color: WHITE }]}>
             {loading ? "Creating account…" : "Create Account"}
           </Text>
@@ -742,6 +793,8 @@ const s = StyleSheet.create({
     marginBottom: 4,
   },
   step3Scroll: { paddingHorizontal: 24, paddingTop: 8 },
+  nameRow: { flexDirection: "row", gap: 10 },
+  nameField: { flex: 1 },
   fieldGroup: { marginBottom: 18 },
   fieldLabel: { fontSize: 14, fontWeight: "600" as const, color: "#94A3B8", marginBottom: 8 },
   inputWrap: {
@@ -759,5 +812,6 @@ const s = StyleSheet.create({
   input: { flex: 1, color: WHITE, fontSize: 16 },
   eyeBtn: { padding: 6 },
   errText: { color: "#EF4444", fontSize: 12, marginTop: 5 },
+  formError: { textAlign: "center", marginBottom: 12 },
   terms: { fontSize: 12, color: MUTED, textAlign: "center" as const, lineHeight: 18, marginBottom: 20 },
 });

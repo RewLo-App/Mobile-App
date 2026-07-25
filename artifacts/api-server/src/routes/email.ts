@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { logger } from "../lib/logger";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
+router.use(requireAuth);
 
 function buildEmailHtml(name: string, teamName: string, gradStart: string, gradEnd: string) {
   return `<!DOCTYPE html>

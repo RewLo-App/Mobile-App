@@ -1,5 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { validateAuthTokenEnvironment } from "./services/auth-token-service";
+import BraleService from "./services/brale-service";
+
+BraleService.validateEnvironment();
+validateAuthTokenEnvironment();
 
 const rawPort = process.env["PORT"];
 

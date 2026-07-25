@@ -1,10 +1,17 @@
 import { Router } from "express";
+import { randomBytes, scryptSync } from "node:crypto";
 import { ReplitConnectors } from "@replit/connectors-sdk";
-import { db, usersTable } from "@workspace/db";
+import { appSettingsTable, db, rewardTransactionsTable, rolesTable, usersTable } from "@workspace/db";
 import { eq, count, desc } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const router = Router();
+const DEFAULT_WELCOME_POINTS = 2_350;
+
+function hashPassword(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  return `scrypt$${salt}$${scryptSync(password, salt, 64).toString("hex")}`;
+}
 
 function buildEmailHtml(name: string, teamName: string, gradStart: string, gradEnd: string) {
   return `<!DOCTYPE html>
@@ -61,22 +68,27 @@ function buildEmailHtml(name: string, teamName: string, gradStart: string, gradE
 
 // POST /api/register — save user + send welcome email
 router.post("/register", async (req, res) => {
-  const { email, primaryClubId, followedClubIds, zip, teamName, gradientStart, gradientEnd } = req.body as {
+  const { email, password, firstName, lastName, primaryClubId, followedClubIds, zipCode, teamName, gradientStart, gradientEnd } = req.body as {
     email?: string;
+    password?: string;
+    firstName?: string;
+    lastName?: string;
     primaryClubId?: string;
     followedClubIds?: string[];
-    zip?: string;
+    zipCode?: string;
     teamName?: string;
     gradientStart?: string;
     gradientEnd?: string;
   };
 
-  if (!email || !primaryClubId) {
-    res.status(400).json({ error: "email and primaryClubId are required" });
+  const submittedEmail = email?.trim();
+  const normalizedEmail = submittedEmail?.toLowerCase();
+  if (!submittedEmail || !normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !password || password.length < 8 || !firstName?.trim() || !lastName?.trim() || !zipCode?.trim() || !primaryClubId) {
+    res.status(400).json({ error: "email, password (8+ characters), firstName, lastName, zipCode, and primaryClubId are required" });
     return;
   }
 
-  const displayName = email.split("@")[0].replace(/[<>]/g, "");
+  const displayName = firstName.trim().replace(/[<>]/g, "");
   const team = teamName ?? "your team";
   const gradStart = gradientStart ?? "#2563EB";
   const gradEnd = gradientEnd ?? "#041828";
@@ -87,24 +99,36 @@ router.post("/register", async (req, res) => {
     const existing = await db
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(eq(usersTable.email, email))
+      .where(eq(usersTable.normalizedEmail, normalizedEmail))
       .limit(1);
 
     if (existing.length > 0) {
       userId = existing[0].id;
       req.log.info({ userId, email }, "User already registered — skipping insert");
     } else {
+      const [fanRole] = await db.select({ id: rolesTable.id }).from(rolesTable).where(eq(rolesTable.name, "Fan")).limit(1);
+      if (!fanRole) throw new Error("FAN_ROLE_MISSING");
+      const [welcomeSetting] = await db.select({ value: appSettingsTable.value }).from(appSettingsTable).where(eq(appSettingsTable.key, "welcome_points")).limit(1);
+      const configuredPoints = Number.parseInt(welcomeSetting?.value ?? "", 10);
+      const welcomePoints = Number.isSafeInteger(configuredPoints) && configuredPoints > 0 ? configuredPoints : DEFAULT_WELCOME_POINTS;
       const inserted = await db
         .insert(usersTable)
         .values({
-          email,
+          email: submittedEmail,
+          normalizedEmail,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          passwordHash: hashPassword(password),
+          roleId: fanRole.id,
           primaryClubId,
           followedClubIds: JSON.stringify(followedClubIds ?? [primaryClubId]),
-          zip: zip ?? null,
+          zipCode: zipCode.trim(),
+          rewloPoints: welcomePoints,
         })
         .returning({ id: usersTable.id });
       userId = inserted[0].id;
-      req.log.info({ userId, email, primaryClubId }, "New user registered");
+      if (welcomePoints > 0) await db.insert(rewardTransactionsTable).values({ userId, pointsDelta: welcomePoints, reason: "Welcome bonus", reference: `WELCOME-${userId}` }).onConflictDoNothing();
+      req.log.info({ userId, email: normalizedEmail, primaryClubId }, "New user registered");
     }
   } catch (err) {
     req.log.error({ err }, "DB insert failed");
@@ -144,7 +168,7 @@ router.get("/admin/stats", async (req, res) => {
         id: usersTable.id,
         email: usersTable.email,
         primaryClubId: usersTable.primaryClubId,
-        zip: usersTable.zip,
+        zipCode: usersTable.zipCode,
         createdAt: usersTable.createdAt,
       })
       .from(usersTable)

@@ -9,7 +9,12 @@
   },
   "scripts": {
     "push": "drizzle-kit push --config ./drizzle.config.ts",
-    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
+    "push-force": "drizzle-kit push --force --config ./drizzle.config.ts",
+    "generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
+    "seed": "tsx ./src/seed.ts",
+    "seed:merchant-brale-fixture": "tsx ./src/seed-merchant-brale-fixture.ts",
+    "reset-auth-data": "tsx ./src/reset-auth-data.ts"
   },
   "dependencies": {
     "drizzle-orm": "catalog:",
@@ -20,6 +25,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "drizzle-kit": "^0.31.10"
+    "drizzle-kit": "^0.31.10",
+    "tsx": "catalog:"
   }
 }

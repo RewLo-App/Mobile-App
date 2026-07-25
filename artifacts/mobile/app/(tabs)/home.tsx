@@ -1,18 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useEffect, useRef, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
-  FlatList,
-  Modal,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -78,19 +75,35 @@ function TransactionRow({ item }: { item: Transaction }) {
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, balance, rewloPoints, transactions, selectedClubId, followedClubIds } = useWallet();
+  const {
+    authenticatedUser,
+    balance,
+    transactions,
+    selectedClubId,
+    followedClubIds,
+    isRestoringSession,
+    isAuthenticated,
+    getCurrentUser,
+    refreshWallet,
+  } = useWallet();
   const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [sendModal, setSendModal] = useState(false);
-  const [sendAmount, setSendAmount] = useState("");
-  const [sendRecipient, setSendRecipient] = useState("");
-  const { sendMoney } = useWallet();
+  const [profileLoading, setProfileLoading] = useState(!authenticatedUser);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const fixture = getFixtureForClub(selectedClubId);
   const [matchTime, setMatchTime] = useState(() =>
     fixture ? getTimeUntilMatch(fixture.dateTime) : null
   );
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      // Pull the current ledger whenever the user returns from a wallet flow.
+      void refreshWallet().catch(() => undefined);
+    }, [isAuthenticated, refreshWallet]),
+  );
 
   useEffect(() => {
     if (!fixture) return;
@@ -110,16 +123,34 @@ export default function HomeScreen() {
     return () => loop.stop();
   }, [matchTime?.isToday, matchTime?.isLive]);
 
-  const recent = transactions.slice(0, 4);
+  useEffect(() => {
+    if (isRestoringSession) return;
+    if (authenticatedUser) {
+      setProfileLoading(false);
+      return;
+    }
+    if (!isAuthenticated) {
+      setProfileLoading(false);
+      setProfileError("Your session has ended. Please sign in again.");
+      return;
+    }
 
-  const handleSend = () => {
-    if (!sendAmount || !sendRecipient) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    sendMoney(parseFloat(sendAmount), sendRecipient);
-    setSendModal(false);
-    setSendAmount("");
-    setSendRecipient("");
-  };
+    let active = true;
+    setProfileLoading(true);
+    setProfileError(null);
+    getCurrentUser()
+      .then((profile) => {
+        if (!active || profile) return;
+        setProfileError("Your profile is unavailable. Please sign in again.");
+      })
+      .catch(() => {
+        if (active) setProfileError("We could not load your profile. Check your connection and try again.");
+      })
+      .finally(() => { if (active) setProfileLoading(false); });
+    return () => { active = false; };
+  }, [authenticatedUser, getCurrentUser, isAuthenticated, isRestoringSession]);
+
+  const recent = transactions.slice(0, 4);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -140,8 +171,9 @@ export default function HomeScreen() {
                 Good morning
               </Text>
               <Text style={[styles.userName, { color: colors.foreground }]}>
-                {user?.name?.split(" ")[0] ?? "Fan"}
+                {profileLoading ? "…" : authenticatedUser?.firstName ?? "Fan"}
               </Text>
+              {profileError && <Text style={[styles.profileError, { color: colors.mutedForeground }]}>{profileError}</Text>}
             </View>
             <View style={styles.headerActions}>
               <Pressable
@@ -165,7 +197,12 @@ export default function HomeScreen() {
           >
             <View style={styles.balanceTop}>
               <Text style={styles.balanceBrand}>Rewlo</Text>
-              <Pressable onPress={() => setBalanceVisible(!balanceVisible)}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={balanceVisible ? "Hide balance" : "Show balance"}
+                onPress={() => setBalanceVisible(!balanceVisible)}
+                style={({ pressed }) => [styles.balanceVisibilityButton, { opacity: pressed ? 0.7 : 1 }]}
+              >
                 <Ionicons
                   name={balanceVisible ? "eye-outline" : "eye-off-outline"}
                   size={20}
@@ -181,23 +218,19 @@ export default function HomeScreen() {
             <View style={styles.pointsRow}>
               <Ionicons name="star" size={14} color="#F59E0B" />
               <Text style={styles.pointsText}>
-                {rewloPoints.toLocaleString()} Rewlo Points
+                {profileLoading ? "Loading points…" : authenticatedUser ? `${authenticatedUser.rewloPoints.toLocaleString("en-US")} RewLo Points` : "Points unavailable"}
               </Text>
             </View>
 
-            {/* Card chip decoration */}
-            <View style={styles.chipDecor}>
-              <View style={styles.chip} />
-            </View>
           </LinearGradient>
 
           {/* Quick Actions */}
           <View style={styles.actionsRow}>
             {[
-              { label: "Send", icon: "arrow-up" as keyof typeof Ionicons.glyphMap, action: () => setSendModal(true) },
-              { label: "Receive", icon: "arrow-down" as keyof typeof Ionicons.glyphMap, action: () => {} },
-              { label: "RewLo Pay", icon: "sparkles" as keyof typeof Ionicons.glyphMap, action: () => router.push("/smart-pay") },
-              { label: "Top Up", icon: "add" as keyof typeof Ionicons.glyphMap, action: () => {} },
+              { label: "Send", icon: "arrow-up" as keyof typeof Ionicons.glyphMap, action: () => router.push("/send-money" as never) },
+              { label: "Receive", icon: "arrow-down" as keyof typeof Ionicons.glyphMap, action: () => router.push("/receive-money" as never) },
+              { label: "RewLo Pay", icon: "sparkles" as keyof typeof Ionicons.glyphMap, action: () => router.push("/merchant-pay" as never) },
+              { label: "Top Up", icon: "add" as keyof typeof Ionicons.glyphMap, action: () => router.push("/top-up" as never) },
             ].map((a) => (
               <Pressable
                 key={a.label}
@@ -278,18 +311,17 @@ export default function HomeScreen() {
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
               Recent Activity
             </Text>
-            <Pressable onPress={() => router.push("/(tabs)/profile")}>
+            <Pressable onPress={() => router.push("/(tabs)/activity")}>
               <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
             </Pressable>
           </View>
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {recent.map((tx) => (
+            {recent.length > 0 ? recent.map((tx) => (
               <TransactionRow key={tx.id} item={tx} />
-            ))}
+            )) : (
+              <Text style={[styles.emptyActivity, { color: colors.mutedForeground }]}>No activity yet</Text>
+            )}
           </View>
-          <Text style={[styles.illustrationNote, { color: colors.mutedForeground }]}>
-            * For illustration only
-          </Text>
         </View>
 
         {/* Club Loyalty Card */}
@@ -304,8 +336,9 @@ export default function HomeScreen() {
             {(followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId]).map((clubId, idx, arr) => {
               const club = getClubById(clubId);
               const ptsShare = arr.length === 1 ? 1 : idx === 0 ? 0.78 : 0.22;
-              const clubPts = Math.round(rewloPoints * ptsShare);
-              const maxPts = Math.round(rewloPoints * (arr.length === 1 ? 1 : 0.78));
+              const profilePoints = authenticatedUser?.rewloPoints ?? 0;
+              const clubPts = Math.round(profilePoints * ptsShare);
+              const maxPts = Math.round(profilePoints * (arr.length === 1 ? 1 : 0.78));
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
               const isLast = idx === arr.length - 1;
               const entry = { club, ptsShare };
@@ -345,36 +378,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
-
-      {/* Send Modal */}
-      <Modal visible={sendModal} transparent animationType="slide">
-        <Pressable style={styles.modalOverlay} onPress={() => setSendModal(false)} />
-        <View style={[styles.modalSheet, { backgroundColor: colors.card, paddingBottom: insets.bottom + 20 }]}>
-          <View style={styles.modalHandle} />
-          <Text style={[styles.modalTitle, { color: colors.foreground }]}>Send Money</Text>
-          <TextInput
-            style={[styles.modalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-            placeholder="Recipient email or @tag"
-            placeholderTextColor={colors.mutedForeground}
-            value={sendRecipient}
-            onChangeText={setSendRecipient}
-          />
-          <TextInput
-            style={[styles.modalInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.secondary }]}
-            placeholder="Amount"
-            placeholderTextColor={colors.mutedForeground}
-            value={sendAmount}
-            onChangeText={setSendAmount}
-            keyboardType="decimal-pad"
-          />
-          <Pressable
-            onPress={handleSend}
-            style={[styles.modalBtn, { backgroundColor: colors.primary }]}
-          >
-            <Text style={styles.modalBtnText}>Send</Text>
-          </Pressable>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -385,9 +388,10 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
   greeting: { fontSize: 13, fontFamily: "Inter_400Regular" },
   userName: { fontSize: 22, fontWeight: "700" as const, fontFamily: "Inter_700Bold" },
+  profileError: { fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 3, maxWidth: 220 },
   headerActions: { flexDirection: "row", gap: 10, alignItems: "center" },
   clubBadge: { borderRadius: 24, overflow: "hidden", borderWidth: 2, borderColor: "rgba(0,229,204,0.7)" },
-  illustrationNote: { fontSize: 11, marginTop: 6, marginLeft: 2 },
+  emptyActivity: { padding: 20, textAlign: "center", fontSize: 13, fontFamily: "Inter_400Regular" },
   notifBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
   balanceCard: {
     borderRadius: 22,
@@ -403,8 +407,7 @@ const styles = StyleSheet.create({
   balanceCurrency: { color: "rgba(255,255,255,0.6)", fontSize: 13, fontFamily: "Inter_400Regular", marginBottom: 14 },
   pointsRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(0,0,0,0.2)", alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   pointsText: { color: "#F59E0B", fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  chipDecor: { position: "absolute", right: 22, top: 22 },
-  chip: { width: 36, height: 28, borderRadius: 6, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
+  balanceVisibilityButton: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.14)", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
   actionsRow: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
   actionBtn: { flex: 1, alignItems: "center", paddingVertical: 14, borderRadius: 16, borderWidth: 1, gap: 8 },
   actionIcon: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },

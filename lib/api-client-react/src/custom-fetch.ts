@@ -7,6 +7,7 @@ export type ErrorType<T = unknown> = ApiError<T>;
 export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
+export type AuthRefreshHandler = () => Promise<boolean>;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
@@ -17,6 +18,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _authRefreshHandler: AuthRefreshHandler | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +44,11 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/** Register a single-flight token refresh callback for expired bearer tokens. */
+export function setAuthRefreshHandler(handler: AuthRefreshHandler | null): void {
+  _authRefreshHandler = handler;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -76,6 +83,18 @@ function resolveUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") return input;
   if (isUrl(input)) return input.toString();
   return input.url;
+}
+
+/** Public auth endpoints must not inherit a token from a prior browser session. */
+function isPublicAuthRequest(input: RequestInfo | URL): boolean {
+  const path = resolveUrl(input).split("?", 1)[0];
+  return [
+    "/api/v1/auth/register",
+    "/api/v1/auth/login",
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
+    "/api/v1/auth/refresh",
+  ].some((endpoint) => path.endsWith(endpoint));
 }
 
 function mergeHeaders(...sources: Array<HeadersInit | undefined>): Headers {
@@ -351,7 +370,7 @@ export async function customFetch<T = unknown>(
 
   // Attach bearer token when an auth getter is configured and no
   // Authorization header has been explicitly provided.
-  if (_authTokenGetter && !headers.has("authorization")) {
+  if (_authTokenGetter && !headers.has("authorization") && !isPublicAuthRequest(input)) {
     const token = await _authTokenGetter();
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
@@ -360,7 +379,22 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  let response = await fetch(input, { ...init, method, headers });
+
+  // A request gets at most one retry. Refresh and logout endpoints are
+  // deliberately excluded so a failed refresh can never recurse.
+  const requestUrl = resolveUrl(input);
+  const mayRefresh = _authRefreshHandler
+    && response.status === 401
+    && headers.has("authorization")
+    && (!requestUrl.includes("/api/v1/auth/") || requestUrl.endsWith("/api/v1/auth/me"));
+  const refreshHandler = _authRefreshHandler;
+  if (mayRefresh && refreshHandler && await refreshHandler()) {
+    const retryHeaders = mergeHeaders(headers);
+    const token = _authTokenGetter ? await _authTokenGetter() : null;
+    if (token) retryHeaders.set("authorization", `Bearer ${token}`);
+    response = await fetch(input, { ...init, method, headers: retryHeaders });
+  }
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

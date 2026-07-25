@@ -22,28 +22,39 @@ import { useColors } from "@/hooks/useColors";
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { login } = useWallet();
+  const { login, forgotPassword, isLoading, authError } = useWallet();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      setError("Please fill in all fields");
+    if (!/\S+@\S+\.\S+/.test(email) || !password) {
+      setError("Enter your email address and password.");
       return;
     }
-    setLoading(true);
     setError("");
+    setNotice("");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const success = await login(email, password);
-    setLoading(false);
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)/home");
     } else {
-      setError("Invalid credentials. Please try again.");
+      setError("");
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError("Enter your email address first.");
+      return;
+    }
+    setError("");
+    setNotice("");
+    if (await forgotPassword(email)) {
+      setNotice("If an account exists, reset instructions have been sent.");
     }
   };
 
@@ -112,19 +123,24 @@ export default function LoginScreen() {
               </Pressable>
             </View>
 
-            {error.length > 0 && (
-              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
-            )}
+            {(error || authError) ? (
+              <Text style={[styles.errorText, { color: colors.destructive }]}>{error || authError}</Text>
+            ) : null}
+            {notice.length > 0 && <Text style={[styles.noticeText, { color: colors.mutedForeground }]}>{notice}</Text>}
+
+            <Pressable onPress={handleForgotPassword} disabled={isLoading} style={styles.textAction}>
+              <Text style={[styles.textActionLabel, { color: colors.primary }]}>Forgot Password?</Text>
+            </Pressable>
 
             <Pressable
               onPress={handleLogin}
-              disabled={loading}
+              disabled={isLoading}
               style={({ pressed }) => [
                 styles.loginBtn,
-                { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 },
+                { backgroundColor: colors.primary, opacity: pressed || isLoading ? 0.85 : 1 },
               ]}
             >
-              {loading ? (
+              {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.loginBtnText}>Sign In</Text>
@@ -134,6 +150,10 @@ export default function LoginScreen() {
 
           {/* Footer */}
           <View style={styles.footer}>
+            <Pressable onPress={() => router.push("/onboarding")} disabled={isLoading} style={styles.createAccount}>
+              <Text style={[styles.securityText, { color: colors.mutedForeground }]}>New to RewLo? </Text>
+              <Text style={[styles.textActionLabel, { color: colors.primary }]}>Create Account</Text>
+            </Pressable>
             <View style={styles.securityRow}>
               <Ionicons name="shield-checkmark-outline" size={14} color={colors.mutedForeground} />
               <Text style={[styles.securityText, { color: colors.mutedForeground }]}>
@@ -224,6 +244,9 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
+  noticeText: { fontSize: 13, fontFamily: "Inter_400Regular", textAlign: "center" },
+  textAction: { alignSelf: "flex-end", paddingVertical: 2 },
+  textActionLabel: { fontSize: 13, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
   loginBtn: {
     height: 56,
     borderRadius: 16,
@@ -241,6 +264,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingBottom: 10,
   },
+  createAccount: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
   securityRow: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,16 +1,136 @@
 openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
-  title: Api
-  version: 0.1.0
-  description: API specification
+  title: RewLo API
+  version: 1.0.0
+  description: Version 1 API for RewLo wallet, rewards, payments, and account operations.
 servers:
-  - url: /api
+  - url: /api/v1
     description: Base API path
 tags:
   - name: health
     description: Health operations
 paths:
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a Fan account with a Brale-managed custodial wallet
+      description: >-
+        Creates a Fan account and provisions its Brale-managed custodial wallet.
+        Email is normalized to lowercase. Authentication tokens are returned only
+        after provisioning has completed successfully; a failed provisioning may
+        be retried with the identical request.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Account and Brale-managed wallet provisioning completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "400":
+          description: Invalid registration input or server-managed fields supplied by the client
+        "409":
+          description: Duplicate or unsafe registration retry
+        "503":
+          description: Wallet provisioning could be retried safely
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401": { description: Invalid credentials or unavailable account }
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request a password-reset link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ForgotPasswordRequest" }
+      responses:
+        "202":
+          description: Generic acknowledgement
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GenericMessage" }
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Set a new password using a single-use reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ResetPasswordRequest" }
+      responses:
+        "204": { description: Password reset and sessions revoked }
+        "400": { description: Invalid reset link or password policy failure }
+  /auth/refresh:
+    post:
+      operationId: refreshSession
+      tags: [auth]
+      summary: Rotate a refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshRequest" }
+      responses:
+        "200":
+          description: Rotated session tokens
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401": { description: "Invalid, expired, revoked, or reused refresh token" }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Revoke the current refresh token
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshRequest" }
+      responses:
+        "204": { description: Session revoked }
+        "401": { description: Authentication or refresh token is invalid }
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the authenticated user
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Safe current-user profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurrentUser" }
+        "401": { description: Authentication is required }
   /healthz:
     get:
       operationId: healthCheck
@@ -25,7 +145,130 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    ForgotPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ResetPasswordRequest:
+      type: object
+      additionalProperties: false
+      required: [token, newPassword]
+      properties:
+        token: { type: string, format: password }
+        newPassword: { type: string, minLength: 12, format: password }
+    GenericMessage:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string, format: password }
+    TokenResponse:
+      type: object
+      required: [tokens]
+      properties:
+        tokens: { $ref: "#/components/schemas/TokenPair" }
+    CurrentUser:
+      type: object
+      required: [id, firstName, lastName, fullName, email, role, zipCode, createdAt, rewloPoints, walletProvisioningStatus]
+      properties:
+        id: { type: integer }
+        firstName: { type: string }
+        lastName: { type: string }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        role: { type: string }
+        zipCode: { type: string }
+        createdAt: { type: string, format: date-time }
+        rewloPoints: { type: integer }
+        walletProvisioningStatus: { type: string }
+        braleAccountId: { type: string, nullable: true }
+        braleWalletId: { type: string, nullable: true }
+        braleAddressId: { type: string, nullable: true }
+        blockchainAddress: { type: string, nullable: true }
+        blockchainNetwork: { type: string, nullable: true }
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [firstName, lastName, email, password, zipCode]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          description: Normalized to lowercase by the server.
+        password:
+          type: string
+          minLength: 12
+          format: password
+        zipCode:
+          type: string
+          minLength: 1
+    AuthenticatedUser:
+      type: object
+      required: [id, firstName, lastName, email, rewloPoints, status, walletProvisioningStatus]
+      properties:
+        id:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+          format: email
+        rewloPoints:
+          type: integer
+        status:
+          type: string
+        walletProvisioningStatus:
+          type: string
+          enum: [completed]
+    TokenPair:
+      type: object
+      required: [accessToken, accessTokenExpiresIn, refreshToken, refreshTokenExpiresAt]
+      properties:
+        accessToken:
+          type: string
+        accessTokenExpiresIn:
+          type: integer
+        refreshToken:
+          type: string
+        refreshTokenExpiresAt:
+          type: string
+          format: date-time
+    RegisterResponse:
+      type: object
+      required: [user, tokens]
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthenticatedUser"
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
     HealthStatus:
       type: object
       properties:

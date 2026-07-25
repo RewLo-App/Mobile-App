@@ -29,6 +29,9 @@ node_modules
 
 # misc
 /.sass-cache
+.env
+.env.*
+!.env.example
 /connect.lock
 /coverage
 /libpeerconnection.log
@@ -47,3 +50,4 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+.env.example
