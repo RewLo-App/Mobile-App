@@ -43,6 +43,14 @@ const BORDER = "rgba(255,255,255,0.10)";
 const MUTED = "#6B8BAE";
 const PRIMARY = "#2563EB";
 const WHITE = "#FFFFFF";
+type AccountErrors = {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  password?: string;
+  zip?: string;
+  form?: string;
+};
 
 function getApiErrorStatus(error: unknown): number | null {
   if (!error || typeof error !== "object" || !("status" in error)) return null;
@@ -105,7 +113,7 @@ export default function OnboardingScreen() {
   const [password, setPassword] = useState("");
   const [zip, setZip] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ firstName?: string; lastName?: string; email?: string; password?: string; zip?: string; form?: string }>({});
+  const [errors, setErrors] = useState<AccountErrors>({});
   const [loading, setLoading] = useState(false);
   const isSubmitting = useRef(false);
 
@@ -142,6 +150,18 @@ export default function OnboardingScreen() {
     if (followsOther && !otherClubId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStep(3);
+  };
+
+  const updateField = (
+    field: Exclude<keyof AccountErrors, "form">,
+    setValue: (value: string) => void,
+  ) => (value: string) => {
+    setValue(value);
+    setErrors((current) => {
+      if (!current[field]) return current;
+      const { [field]: _clearedError, ...remainingErrors } = current;
+      return remainingErrors;
+    });
   };
 
   const validateStep3 = () => {
@@ -235,11 +255,11 @@ export default function OnboardingScreen() {
         />}
 
         {step === 3 && <Step3
-          firstName={firstName} setFirstName={setFirstName}
-          lastName={lastName} setLastName={setLastName}
-          email={email} setEmail={setEmail}
-          password={password} setPassword={setPassword}
-          zip={zip} setZip={setZip}
+          firstName={firstName} setFirstName={updateField("firstName", setFirstName)}
+          lastName={lastName} setLastName={updateField("lastName", setLastName)}
+          email={email} setEmail={updateField("email", setEmail)}
+          password={password} setPassword={updateField("password", setPassword)}
+          zip={zip} setZip={updateField("zip", setZip)}
           showPassword={showPassword} setShowPassword={setShowPassword}
           errors={errors}
           loading={loading}
