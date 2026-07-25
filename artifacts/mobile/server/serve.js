@@ -107,12 +107,26 @@ function serveStaticFile(urlPath, res) {
 const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
 const appName = getAppName();
 
+const STATIC_PAGES = {};
+for (const page of ["support.html", "privacy.html"]) {
+  const pagePath = path.resolve(__dirname, "templates", page);
+  if (fs.existsSync(pagePath)) {
+    STATIC_PAGES["/" + page] = fs.readFileSync(pagePath, "utf-8");
+  }
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host}`);
   let pathname = url.pathname;
 
   if (basePath && pathname.startsWith(basePath)) {
     pathname = pathname.slice(basePath.length) || "/";
+  }
+
+  if (pathname === "/support") pathname = "/support.html";
+  if (STATIC_PAGES[pathname]) {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    return res.end(STATIC_PAGES[pathname]);
   }
 
   if (pathname === "/" || pathname === "/manifest") {

@@ -10,7 +10,7 @@ Complete these fields in **App Store Connect** before submitting the iOS build.
 | Subtitle | Sports Fan Wallet |
 | Primary category | Finance |
 | Secondary category | Sports |
-| Support URL | `https://rewlo.io` (replace with the dedicated support page when available) |
+| Support URL | `https://rewlo.io/support.html` |
 | Privacy policy URL | `https://rewlo.io/privacy.html` |
 | Age rating | Complete Apple’s questionnaire based on the final enabled features; do not guess. |
 

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RewLo Support</title>
+  <style>
+    :root {
+      --cyan: #00E5CC;
+      --navy: #041120;
+      --card: #0A1B30;
+      --border: #1A2E45;
+      --text: #E6EEF6;
+      --muted: #8FA6BC;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--navy);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+    header { margin-bottom: 40px; }
+    .logo { color: var(--cyan); font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+    h1 { font-size: 32px; margin-top: 24px; font-weight: 700; }
+    .sub { color: var(--muted); margin-top: 8px; font-size: 16px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 24px;
+    }
+    .card h2 { font-size: 18px; color: var(--cyan); margin-bottom: 12px; }
+    .card p, .card li { color: var(--text); font-size: 15px; }
+    .card ul, .card ol { padding-left: 22px; margin-top: 8px; }
+    .card li { margin-bottom: 8px; }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .contact-btn {
+      display: inline-block;
+      background: var(--cyan);
+      color: var(--navy);
+      font-weight: 700;
+      padding: 14px 28px;
+      border-radius: 12px;
+      margin-top: 12px;
+    }
+    .contact-btn:hover { text-decoration: none; opacity: 0.9; }
+    .muted { color: var(--muted); font-size: 13px; }
+    footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 13px; }
+    footer a { color: var(--muted); text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">RewLo</div>
+      <h1>Support</h1>
+      <p class="sub">We're here to help with anything about the RewLo app.</p>
+    </header>
+
+    <div class="card">
+      <h2>Contact us</h2>
+      <p>For any questions, issues, or feedback, email our support team. We aim to respond within 1&ndash;2 business days.</p>
+      <a class="contact-btn" href="mailto:support@rewlo.io">Email support@rewlo.io</a>
+    </div>
+
+    <div class="card">
+      <h2>Frequently asked questions</h2>
+      <ul>
+        <li><strong>How do I sign in?</strong> Open the app and sign in with your registered email address and password.</li>
+        <li><strong>How do I earn points?</strong> Points are earned when you pay at participating partner merchants through the app.</li>
+        <li><strong>How do I redeem points?</strong> Use RewLo Pay at checkout &mdash; the app recommends the best time to apply your points.</li>
+        <li><strong>How do I change my club?</strong> Go to Profile &rarr; My Club to switch your selected sports club.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Delete your account</h2>
+      <p>You can delete your account and all associated data directly in the app:</p>
+      <ol>
+        <li>Open the RewLo app</li>
+        <li>Go to the <strong>Profile</strong> tab</li>
+        <li>Tap <strong>Delete Account</strong> and confirm</li>
+      </ol>
+      <p class="muted" style="margin-top:12px;">You can also request deletion by emailing <a href="mailto:support@rewlo.io">support@rewlo.io</a> from your registered email address.</p>
+    </div>
+
+    <footer>
+      <p>&copy; RewLo &middot; <a href="/privacy.html">Privacy Policy</a></p>
+    </footer>
+  </div>
+</body>
+</html>
