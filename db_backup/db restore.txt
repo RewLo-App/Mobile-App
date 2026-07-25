@@ -1,1 +1,18 @@
+
+Step 1: restore from local
+& "C:\Program Files\PostgreSQL\18\bin\pg_dump.exe" `
+--no-owner `
+--no-privileges `
+--clean `
+--if-exists `
+--format=plain `
+--file="$HOME\Downloads\db_backup\rewlo-local.sql" `
+ "postgresql://postgres:12345@localhost:5432/rewlo_local"
+
+
+
+
+Step 2: upload the folder and set the DATABASE_URL with your required DB
+
+Step 3: run below restore command.
 psql "$DATABASE_URL" -f db_backup/rewlo-local.sql
