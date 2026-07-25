@@ -29,10 +29,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID@email.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_APP_ID",
-        "appleTeamId": "YOUR_APPLE_TEAM_ID"
-      }
+        "appleId": "sumit.singh@rewlo.io",
+        "ascAppId": "6787715852",
+        "appleTeamId" "22847217587|1"
     }
   }
 }

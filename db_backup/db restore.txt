@@ -1,0 +1,1 @@
+psql "$DATABASE_URL" -f db_backup/rewlo-local.sql
