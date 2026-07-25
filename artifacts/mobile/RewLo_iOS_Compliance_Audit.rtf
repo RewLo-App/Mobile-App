@@ -1,0 +1,62 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Calibri;}}
+\paperw11906\paperh16838\margl1440\margr1440\margt1440\margb1440
+\fs24
+\pard\sa240\b\fs36 RewLo iOS Compliance Audit\b0\fs24\par
+\pard\sa180 Prepared: 25 July 2026\par
+\pard\sa240 This report is a technical App Store-readiness review. It is not legal advice.\par
+
+\b\fs28 Overall status: Not ready for App Store submission\b0\fs24\par
+\pard\sa240 The current project has build, product-readiness, privacy, and financial-services compliance items that should be resolved before App Store submission.\par
+
+\b\fs28 Findings\b0\fs24\par
+
+\pard\sa120\b 1. BLOCKER - Invalid EAS submission configuration\b0\par
+The mobile eas.json file is invalid JSON: the appleTeamId property is missing a colon. EAS cannot parse this configuration. The current team-ID value also appears to include an invalid suffix; replace it with the actual Apple Developer Team ID.\par
+\pard\sa240 Evidence: artifacts/mobile/eas.json, line 34.\par
+
+\pard\sa120\b 2. HIGH - Simulated QR payments in a wallet/payment app\b0\par
+The QR scanner ignores the scanned QR content, selects a random demo merchant/payment, and records a local transaction. The user-facing flow states that payments are simulated until launch. This conflicts with the app's wallet/payment positioning and creates a strong risk of rejection for incomplete or inaccurate functionality.\par
+\pard\sa240 Evidence: artifacts/mobile/app/scan.tsx.\par
+
+\pard\sa120\b 3. HIGH - Shipped build is labelled as an early-access preview\b0\par
+The Profile screen displays "Early Access Preview." App Store submissions must be complete production versions. Use TestFlight for beta distribution, then remove preview/beta wording before App Store submission.\par
+\pard\sa240 Evidence: artifacts/mobile/app/(tabs)/profile.tsx.\par
+
+\pard\sa120\b 4. HIGH - Custodial stablecoin wallet, P2P transfers, and merchant payments\b0\par
+The backend provisions Brale custody references and supports wallet top-ups, stablecoin transfers between users, and merchant payments. Before submission, confirm that the Apple Developer account is enrolled as an organization and that all financial, virtual-currency, money-transmission, KYC/AML, sanctions, and regional licensing obligations are satisfied for every launch country. Enforce country restrictions where required.\par
+\pard\sa240 Apple guideline 3.1.5 allows cryptocurrency wallets only when offered by organization-enrolled developers, and requires appropriate licences/permissions for relevant transactions.\par
+
+\pard\sa120\b 5. HIGH - Privacy policy and App Privacy labels need a final data inventory\b0\par
+The app collects account identity/contact details, ZIP code, wallet balances and transactions, payment-card metadata, rewards activity, authentication tokens, and camera access. The public privacy policy and App Store Connect privacy answers must accurately disclose this data, its purposes, whether it is linked to the user, all processors (including Brale and email delivery providers), retention periods, deletion process, and legally required financial-record retention exceptions.\par
+
+\pard\sa120\b 6. MEDIUM - Privacy manifest verification required\b0\par
+No app-owned PrivacyInfo.xcprivacy file was found in the repository. Expo dependencies may supply their own manifests, but verify the generated IPA includes valid privacy manifests and required-reason declarations. Invalid manifests can block App Store Connect submission.\par
+
+\pard\sa120\b 7. MEDIUM - App Review access must cover all account-based features\b0\par
+Provide a live test account, current credentials, valid sample merchant QR code(s), a reachable production HTTPS API, and precise reviewer instructions. Apple reviewers must be able to access and test the account-based wallet flows.\par
+
+\pard\sa120\b 8. MEDIUM - Misleading settings controls\b0\par
+The Profile screen exposes Biometrics and Push Notifications toggles, but the reviewed mobile dependencies and source do not show biometric authentication or push-notification registration/handling. Either implement these features and their related permissions/privacy disclosures or remove the controls.\par
+
+\b\fs28 Positive checks\b0\fs24\par
+\pard\sa120\bullet\tab Session tokens are stored with Expo SecureStore on native platforms.\par
+\pard\sa120\bullet\tab Production configuration requires a public HTTPS API URL.\par
+\pard\sa240\bullet\tab The app offers in-app account deletion, which Apple requires when account creation is supported.\par
+
+\b\fs28 Release gate checklist\b0\fs24\par
+\pard\sa120\bullet\tab Correct eas.json and run a production EAS build successfully.\par
+\pard\sa120\bullet\tab Replace all demo/simulated payment functionality with real, reviewable production flows, or remove payment claims.\par
+\pard\sa120\bullet\tab Remove all preview/beta wording from the App Store build.\par
+\pard\sa120\bullet\tab Complete legal/financial approval for each distribution territory and confirm organization enrollment.\par
+\pard\sa120\bullet\tab Publish and test Privacy Policy and Support URLs; complete matching App Privacy labels.\par
+\pard\sa120\bullet\tab Verify privacy manifests in the final IPA.\par
+\pard\sa120\bullet\tab Provide App Review credentials, sample QR codes, and clear review notes.\par
+\pard\sa240\bullet\tab Test on a physical iPhone using the release build.\par
+
+\b\fs28 Apple references\b0\fs24\par
+\pard\sa120 App Review Guidelines: https://developer.apple.com/app-store/review/guidelines/\par
+\pard\sa120 App Review preparation: https://developer.apple.com/app-store/review/\par
+\pard\sa120 App privacy in App Store Connect: https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy\par
+\pard\sa240 Privacy manifests: https://developer.apple.com/documentation/bundleresources/adding-a-privacy-manifest-to-your-app-or-third-party-sdk\par
+}
