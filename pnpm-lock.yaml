@@ -153,9 +153,6 @@ importers:
 
   .:
     devDependencies:
-      concurrently:
-        specifier: ^10.0.3
-        version: 10.0.3
       prettier:
         specifier: ^3.8.4
         version: 3.8.4
