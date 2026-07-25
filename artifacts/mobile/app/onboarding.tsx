@@ -794,7 +794,7 @@ const s = StyleSheet.create({
   },
   step3Scroll: { paddingHorizontal: 24, paddingTop: 8 },
   nameRow: { flexDirection: "row", gap: 10 },
-  nameField: { flex: 1 },
+  nameField: { flex: 1, minWidth: 0 },
   fieldGroup: { marginBottom: 18 },
   fieldLabel: { fontSize: 14, fontWeight: "600" as const, color: "#94A3B8", marginBottom: 8 },
   inputWrap: {
@@ -809,7 +809,7 @@ const s = StyleSheet.create({
   },
   inputError: { borderColor: "#EF4444" },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, color: WHITE, fontSize: 16 },
+  input: { flex: 1, minWidth: 0, color: WHITE, fontSize: 16 },
   eyeBtn: { padding: 6 },
   errText: { color: "#EF4444", fontSize: 12, marginTop: 5 },
   formError: { textAlign: "center", marginBottom: 12 },
