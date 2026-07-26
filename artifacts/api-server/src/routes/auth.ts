@@ -13,8 +13,12 @@ const allowedFields = new Set(["firstName", "lastName", "email", "password", "zi
 // Local-development escape hatch. Keep this disabled outside local testing.
 const allowUnprovisionedRegistration = process.env["ALLOW_UNPROVISIONED_REGISTRATION"] === "true";
 
-function passwordIsValid(password: string) {
-  return password.length >= 6
+function registrationPasswordIsValid(password: string) {
+  return password.length >= 6;
+}
+
+function resetPasswordIsValid(password: string) {
+  return password.length >= 12
     && /[a-z]/.test(password)
     && /[A-Z]/.test(password)
     && /\d/.test(password)
@@ -53,8 +57,8 @@ router.post("/auth/register", async (req, res) => {
   const normalizedEmail = submittedEmail.toLowerCase();
   const password = typeof body.password === "string" ? body.password : "";
   const zipCode = typeof body.zipCode === "string" ? body.zipCode.trim() : "";
-  if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !passwordIsValid(password) || !zipCode) {
-    res.status(400).json({ error: "firstName, lastName, a valid email, a strong password, and zipCode are required." });
+  if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !registrationPasswordIsValid(password) || !zipCode) {
+    res.status(400).json({ error: "firstName, lastName, a valid email, a password with at least 6 characters, and zipCode are required." });
     return;
   }
 
@@ -217,7 +221,7 @@ router.post("/auth/forgot-password", async (req, res) => {
 router.post("/auth/reset-password", async (req, res) => {
   const token = typeof req.body?.token === "string" ? req.body.token : "";
   const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
-  if (!passwordIsValid(newPassword)) { res.status(400).json({ error: "Password does not meet security requirements." }); return; }
+  if (!resetPasswordIsValid(newPassword)) { res.status(400).json({ error: "Password does not meet security requirements." }); return; }
   let reset = false;
   if (token) {
     await db.transaction(async (tx) => {

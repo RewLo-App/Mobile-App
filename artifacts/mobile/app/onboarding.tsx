@@ -195,13 +195,17 @@ export default function OnboardingScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace("/(tabs)/home");
     } catch (error) {
-      console.error("Account registration failed:", error);
       const status = getApiErrorStatus(error);
-      const message = status === 409
-        ? "An account with this email already exists."
-        : status === 400
-          ? "Please review the highlighted details."
-          : status === 503
+      if (status === 409) {
+        setErrors((current) => ({
+          ...current,
+          email: "An account with this email already exists. Please sign in.",
+        }));
+        return;
+      }
+      const message = status === 400
+        ? "Please review the highlighted details."
+        : status === 503
             ? "Registration is temporarily unavailable. Please try again."
             : "We couldn’t create your account. Please try again.";
       setErrors((current) => ({ ...current, form: message }));
