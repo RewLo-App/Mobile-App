@@ -199,7 +199,7 @@ export default function OnboardingScreen() {
       if (status === 409) {
         setErrors((current) => ({
           ...current,
-          email: "An account with this email already exists. Please sign in.",
+          email: "An account with this email already exists.",
         }));
         return;
       }

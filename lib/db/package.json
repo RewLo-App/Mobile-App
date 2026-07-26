@@ -13,6 +13,7 @@
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
     "migrate": "drizzle-kit migrate --config ./drizzle.config.ts",
     "seed": "tsx ./src/seed.ts",
+    "seed:club-offers": "tsx ./src/seed-club-offers.ts",
     "seed:merchant-brale-fixture": "tsx ./src/seed-merchant-brale-fixture.ts",
     "reset-auth-data": "tsx ./src/reset-auth-data.ts"
   },
