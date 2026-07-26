@@ -14,7 +14,7 @@ import * as zod from 'zod';
  */
 
 
-export const registerBodyPasswordMin = 12;
+export const registerBodyPasswordMin = 6;
 
 
 

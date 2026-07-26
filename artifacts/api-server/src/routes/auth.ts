@@ -14,7 +14,7 @@ const allowedFields = new Set(["firstName", "lastName", "email", "password", "zi
 const allowUnprovisionedRegistration = process.env["ALLOW_UNPROVISIONED_REGISTRATION"] === "true";
 
 function passwordIsValid(password: string) {
-  return password.length >= 12
+  return password.length >= 6
     && /[a-z]/.test(password)
     && /[A-Z]/.test(password)
     && /\d/.test(password)

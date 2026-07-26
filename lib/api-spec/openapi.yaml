@@ -223,7 +223,7 @@ components:
           description: Normalized to lowercase by the server.
         password:
           type: string
-          minLength: 12
+          minLength: 6
           format: password
         zipCode:
           type: string

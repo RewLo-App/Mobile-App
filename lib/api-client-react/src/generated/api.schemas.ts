@@ -64,7 +64,7 @@ export interface RegisterRequest {
   lastName: string;
   /** Normalized to lowercase by the server. */
   email: string;
-  /** @minLength 12 */
+  /** @minLength 6 */
   password: string;
   /** @minLength 1 */
   zipCode: string;

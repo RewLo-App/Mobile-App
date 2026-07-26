@@ -169,7 +169,7 @@ export default function OnboardingScreen() {
     if (!firstName.trim()) e.firstName = "Enter your first name";
     if (!lastName.trim()) e.lastName = "Enter your last name";
     if (!/\S+@\S+\.\S+/.test(email)) e.email = "Enter a valid email address";
-    if (password.length < 12) e.password = "Use at least 12 characters";
+    if (password.length < 6) e.password = "Use at least 6 characters";
     if (!/^\d{5}$/.test(zip)) e.zip = "Enter a valid 5-digit ZIP code";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -601,7 +601,7 @@ function Step3({
             <Ionicons name="lock-closed-outline" size={18} color={MUTED} style={s.inputIcon} />
             <TextInput
               style={s.input}
-              placeholder="Min. 12 characters"
+              placeholder="Min. 6 characters"
               placeholderTextColor={MUTED}
               value={password}
               onChangeText={setPassword}

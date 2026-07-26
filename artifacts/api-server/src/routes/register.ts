@@ -83,8 +83,8 @@ router.post("/register", async (req, res) => {
 
   const submittedEmail = email?.trim();
   const normalizedEmail = submittedEmail?.toLowerCase();
-  if (!submittedEmail || !normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !password || password.length < 8 || !firstName?.trim() || !lastName?.trim() || !zipCode?.trim() || !primaryClubId) {
-    res.status(400).json({ error: "email, password (8+ characters), firstName, lastName, zipCode, and primaryClubId are required" });
+  if (!submittedEmail || !normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail) || !password || password.length < 6 || !firstName?.trim() || !lastName?.trim() || !zipCode?.trim() || !primaryClubId) {
+    res.status(400).json({ error: "email, password (6+ characters), firstName, lastName, zipCode, and primaryClubId are required" });
     return;
   }
 
