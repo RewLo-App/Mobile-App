@@ -52,6 +52,14 @@ type AccountErrors = {
   form?: string;
 };
 
+type AccountDraft = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  zip: string;
+};
+
 function getApiErrorStatus(error: unknown): number | null {
   if (!error || typeof error !== "object" || !("status" in error)) return null;
   const status = (error as { status?: unknown }).status;
@@ -116,6 +124,9 @@ export default function OnboardingScreen() {
   const [errors, setErrors] = useState<AccountErrors>({});
   const [loading, setLoading] = useState(false);
   const isSubmitting = useRef(false);
+  // Keep an immediate copy of TextInput changes. On native/web previews the
+  // keyboard's submit event can arrive before React has committed setState.
+  const accountDraftRef = useRef<AccountDraft>({ firstName: "", lastName: "", email: "", password: "", zip: "" });
 
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const btmPad = Platform.OS === "web" ? 24 : insets.bottom;
@@ -156,6 +167,7 @@ export default function OnboardingScreen() {
     field: Exclude<keyof AccountErrors, "form">,
     setValue: (value: string) => void,
   ) => (value: string) => {
+    accountDraftRef.current[field] = value;
     setValue(value);
     setErrors((current) => {
       if (!current[field]) return current;
@@ -164,30 +176,31 @@ export default function OnboardingScreen() {
     });
   };
 
-  const validateStep3 = () => {
+  const validateStep3 = (draft: AccountDraft) => {
     const e: typeof errors = {};
-    if (!firstName.trim()) e.firstName = "Enter your first name";
-    if (!lastName.trim()) e.lastName = "Enter your last name";
-    if (!/\S+@\S+\.\S+/.test(email)) e.email = "Enter a valid email address";
-    if (password.length < 6) e.password = "Use at least 6 characters";
-    if (!/^\d{5}$/.test(zip)) e.zip = "Enter a valid 5-digit ZIP code";
+    if (!draft.firstName.trim()) e.firstName = "Enter your first name";
+    if (!draft.lastName.trim()) e.lastName = "Enter your last name";
+    if (!/\S+@\S+\.\S+/.test(draft.email)) e.email = "Enter a valid email address";
+    if (draft.password.length < 6) e.password = "Use at least 6 characters";
+    if (!/^\d{5}$/.test(draft.zip)) e.zip = "Enter a valid 5-digit ZIP code";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleCreateAccount = async () => {
-    if (isSubmitting.current || !validateStep3()) return;
+    const draft = accountDraftRef.current;
+    if (isSubmitting.current || !validateStep3(draft)) return;
     isSubmitting.current = true;
     setLoading(true);
     const followed = [primaryClubId!, ...(followsOther && otherClubId ? [otherClubId] : [])];
     try {
       configureAuthClient();
       const registration = await register({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        password,
-        zipCode: zip,
+        firstName: draft.firstName.trim(),
+        lastName: draft.lastName.trim(),
+        email: draft.email.trim(),
+        password: draft.password,
+        zipCode: draft.zip,
       });
       await saveAuthTokens(registration.tokens.accessToken, registration.tokens.refreshToken);
       const currentUser = await loadCurrentUser();
