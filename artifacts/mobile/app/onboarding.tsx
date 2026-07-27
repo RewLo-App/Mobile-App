@@ -67,9 +67,9 @@ function getApiErrorStatus(error: unknown): number | null {
 }
 
 // ── Progress bar ─────────────────────────────────────────────────
-function ProgressBar({ step, compact }: { step: number; compact?: boolean }) {
+function ProgressBar({ step }: { step: number }) {
   return (
-    <View style={[pb.row, compact && pb.rowCompact]}>
+    <View style={pb.row}>
       {[1, 2, 3].map((s) => (
         <View
           key={s}
@@ -84,7 +84,6 @@ function ProgressBar({ step, compact }: { step: number; compact?: boolean }) {
 }
 const pb = StyleSheet.create({
   row: { flexDirection: "row", gap: 6, paddingHorizontal: 24, marginBottom: 20 },
-  rowCompact: { paddingRight: 112 },
   seg: { flex: 1, height: 3, borderRadius: 3 },
 });
 
@@ -246,19 +245,7 @@ export default function OnboardingScreen() {
           </Pressable>
         )}
 
-        {step < 4 && <ProgressBar step={step as 1 | 2 | 3} compact={step === 1} />}
-
-        {step === 1 && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Sign in to an existing account"
-            onPress={() => router.replace("/login")}
-            style={({ pressed }) => [s.signInButton, { top: topPad + 10, opacity: pressed ? 0.75 : 1 }]}
-          >
-            <Text style={s.signInPrompt}>Have an account?</Text>
-            <Text style={s.signInLabel}>Sign in</Text>
-          </Pressable>
-        )}
+        {step < 4 && <ProgressBar step={step as 1 | 2 | 3} />}
 
         {step === 1 && <Step1
           leagues={US_LEAGUES}
@@ -329,6 +316,15 @@ function Step1({
         <RewloLogo />
         <Text style={s.stepTitle}>Pick your team</Text>
         <Text style={s.stepSub}>Select the club you root for most</Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Sign in to an existing account"
+          onPress={() => router.replace("/login")}
+          style={({ pressed }) => [s.signInButton, { opacity: pressed ? 0.75 : 1 }]}
+        >
+          <Text style={s.signInPrompt}>Have an account?</Text>
+          <Text style={s.signInLabel}>Sign in</Text>
+        </Pressable>
       </View>
 
       {/* League tabs */}
@@ -773,13 +769,11 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   signInButton: {
-    position: "absolute",
-    right: 20,
-    zIndex: 10,
-    height: 30,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    paddingVertical: 4,
+    marginTop: 2,
   },
   signInPrompt: { color: MUTED, fontSize: 12, fontWeight: "500" as const },
   signInLabel: { color: LOGO_CYAN, fontSize: 13, fontWeight: "700" as const },
