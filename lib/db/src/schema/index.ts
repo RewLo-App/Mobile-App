@@ -6,3 +6,6 @@ export * from "./wallet-transactions";
 export * from "./rewards";
 export * from "./auth-tokens";
 export * from "./relations";
+export * from "./conversations";
+export * from "./messages";
+export * from "./assistant";

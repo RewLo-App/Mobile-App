@@ -14,6 +14,7 @@ import {
 } from "@workspace/db";
 import BraleService, { BraleApiError } from "../services/brale-service";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth";
+import { redeemOfferForUser } from "../services/redemption-service";
 import { authenticatedUserId } from "../middleware/identity";
 
 const router = Router();
@@ -387,88 +388,9 @@ router.post("/rewards/:offerId/redeem", async (req: AuthenticatedRequest, res) =
     return;
   }
   try {
-    // The Brale client stores an audit row through its own connection. Calling
-    // it while this transaction holds a user lock creates a lock wait that can
-    // outlive the browser request. Validate first, then call Brale without a
-    // database lock; the transaction below validates again before committing.
-    const [preflightUser] = await db
-      .select({ points: usersTable.rewloPoints, braleAddressId: usersTable.braleAddressId })
-      .from(usersTable)
-      .where(eq(usersTable.id, id));
-    const [preflightOffer] = await db
-      .select()
-      .from(offersTable)
-      .where(and(eq(offersTable.id, offerId), eq(offersTable.available, true), gt(offersTable.expiresAt, new Date())));
-    if (!preflightUser || !preflightOffer) throw new Error("NOT_FOUND");
-    if (preflightUser.points < preflightOffer.pointsRequired) throw new Error("INSUFFICIENT_POINTS");
-    if (!preflightUser.braleAddressId) throw new Error("WALLET_NOT_CONFIGURED");
-
-    // The stable key makes a retry safe if the provider accepted the redemption
-    // but the local database operation failed before its response was sent.
-    const reference = `REDEEM-${id}-${offerId}`;
-    const brale = await new BraleService().redeemStablecoin({
-      userId: id,
-      sourceAddressId: preflightUser.braleAddressId,
-      amount: { value: (preflightOffer.redemptionValueCents / 100).toFixed(2), currency: "USD" },
-      idempotencyKey: reference,
-    });
-
-    const result = await db.transaction(async (tx) => {
-      const locked = await tx.execute(
-        sql`SELECT id, rewlo_points, brale_address_id FROM users WHERE id=${id} FOR UPDATE`,
-      );
-      const user = locked.rows[0] as
-        | { rewlo_points: number; brale_address_id: string | null }
-        | undefined;
-      const [offer] = await tx
-        .select()
-        .from(offersTable)
-        .where(
-          and(
-            eq(offersTable.id, offerId),
-            eq(offersTable.available, true),
-            gt(offersTable.expiresAt, new Date()),
-          ),
-        );
-      if (!user || !offer) throw new Error("NOT_FOUND");
-      if (user.rewlo_points < offer.pointsRequired)
-        throw new Error("INSUFFICIENT_POINTS");
-      if (!user.brale_address_id) throw new Error("WALLET_NOT_CONFIGURED");
-      const [existingRedemption] = await tx
-        .select({ id: offerRedemptionsTable.id })
-        .from(offerRedemptionsTable)
-        .where(and(eq(offerRedemptionsTable.userId, id), eq(offerRedemptionsTable.offerId, offerId)))
-        .limit(1);
-      if (existingRedemption) throw new Error("ALREADY_REDEEMED");
-      await tx
-        .update(usersTable)
-        .set({
-          rewloPoints: sql`${usersTable.rewloPoints}-${offer.pointsRequired}`,
-        })
-        .where(eq(usersTable.id, id));
-      await tx
-        .insert(offerRedemptionsTable)
-        .values({
-          userId: id,
-          offerId,
-          pointsSpent: offer.pointsRequired,
-          reference,
-          braleTransactionId: externalId(brale),
-        });
-      await tx
-        .insert(rewardTransactionsTable)
-        .values({
-          userId: id,
-          pointsDelta: -offer.pointsRequired,
-          reason: `Redeemed: ${offer.title}`,
-          reference: `${reference}:points`,
-        });
-      return {
-        reference,
-        points: user.rewlo_points - offer.pointsRequired,
-        braleTransactionId: externalId(brale),
-      };
-    });
+    // Shared with assistant-drafted confirmations so both paths move money
+    // through the identical validated Brale redemption flow.
+    const result = await redeemOfferForUser(id, offerId);
     res.status(201).json(result);
   } catch (e) {
     const m = e instanceof Error ? e.message : "";

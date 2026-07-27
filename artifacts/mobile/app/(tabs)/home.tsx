@@ -19,6 +19,53 @@ import { getClubById } from "@/constants/clubs";
 import { getFixtureForClub, getTimeUntilMatch } from "@/constants/fixtures";
 import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import { assistantApi, type AssistantNudge } from "@/utils/assistantApi";
+
+const NUDGE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  expiring_offer: "time-outline",
+  category_habit: "repeat-outline",
+  inactivity: "star-outline",
+};
+
+function NudgeCard({
+  nudge,
+  onAccept,
+  onDismiss,
+}: {
+  nudge: AssistantNudge;
+  onAccept: (nudge: AssistantNudge) => void;
+  onDismiss: (nudge: AssistantNudge) => void;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[styles.nudgeCard, { backgroundColor: colors.card, borderColor: `${colors.primary}44` }]}>
+      <View style={styles.nudgeTop}>
+        <View style={[styles.nudgeIcon, { backgroundColor: `${colors.primary}22` }]}>
+          <Ionicons name={NUDGE_ICONS[nudge.kind] ?? "sparkles"} size={16} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.nudgeTitle, { color: colors.foreground }]}>{nudge.title}</Text>
+          <Text style={[styles.nudgeBody, { color: colors.mutedForeground }]}>{nudge.body}</Text>
+        </View>
+        <Pressable
+          onPress={() => onDismiss(nudge)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss suggestion"
+        >
+          <Ionicons name="close" size={18} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
+      <Pressable
+        onPress={() => onAccept(nudge)}
+        style={({ pressed }) => [styles.nudgeCta, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+      >
+        <Text style={styles.nudgeCtaText}>{nudge.offerId ? "View offer" : "See my rewards"}</Text>
+        <Ionicons name="arrow-forward" size={14} color="#fff" />
+      </Pressable>
+    </View>
+  );
+}
 
 function TransactionRow({ item }: { item: Transaction }) {
   const colors = useColors();
@@ -90,6 +137,49 @@ export default function HomeScreen() {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [profileLoading, setProfileLoading] = useState(!authenticatedUser);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  const [nudges, setNudges] = useState<AssistantNudge[]>([]);
+  const [unseenNudges, setUnseenNudges] = useState(0);
+
+  const loadNudges = useCallback(async () => {
+    try {
+      const data = await assistantApi.nudges();
+      setNudges(data.nudges);
+      setUnseenNudges(data.unseenCount);
+    } catch {
+      // The home feed stays usable when the assistant is unavailable.
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      void loadNudges();
+    }, [isAuthenticated, loadNudges]),
+  );
+
+  const respondToNudge = useCallback(
+    (nudge: AssistantNudge, action: "accepted" | "dismissed") => {
+      setNudges((prev) => prev.filter((n) => n.id !== nudge.id));
+      setUnseenNudges((prev) => (nudge.status === "pending" ? Math.max(0, prev - 1) : prev));
+      void assistantApi.respondToNudge(nudge.id, action).catch(() => undefined);
+      if (action === "accepted") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push("/(tabs)/rewards");
+      }
+    },
+    [],
+  );
+
+  const markNudgesSeen = useCallback(() => {
+    const pending = nudges.filter((n) => n.status === "pending");
+    if (pending.length === 0) return;
+    setUnseenNudges(0);
+    setNudges((prev) => prev.map((n) => ({ ...n, status: "seen" as const })));
+    for (const n of pending) {
+      void assistantApi.respondToNudge(n.id, "seen").catch(() => undefined);
+    }
+  }, [nudges]);
 
   const fixture = getFixtureForClub(selectedClubId);
   const [matchTime, setMatchTime] = useState(() =>
@@ -182,8 +272,18 @@ export default function HomeScreen() {
               >
                 <ClubBadge club={selectedClub} size={48} />
               </Pressable>
-              <Pressable style={[styles.notifBtn, { backgroundColor: colors.card }]}>
+              <Pressable
+                onPress={markNudgesSeen}
+                style={[styles.notifBtn, { backgroundColor: colors.card }]}
+                accessibilityRole="button"
+                accessibilityLabel={unseenNudges > 0 ? `${unseenNudges} new suggestions` : "Notifications"}
+              >
                 <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+                {unseenNudges > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>{unseenNudges > 9 ? "9+" : unseenNudges}</Text>
+                  </View>
+                )}
               </Pressable>
             </View>
           </View>
@@ -250,6 +350,28 @@ export default function HomeScreen() {
             ))}
           </View>
         </LinearGradient>
+
+        {/* Assistant Nudges */}
+        {nudges.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>For you</Text>
+              <Pressable onPress={() => router.push("/assistant-rules" as never)}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>My rules</Text>
+              </Pressable>
+            </View>
+            <View style={{ gap: 10 }}>
+              {nudges.slice(0, 3).map((nudge) => (
+                <NudgeCard
+                  key={nudge.id}
+                  nudge={nudge}
+                  onAccept={(n) => respondToNudge(n, "accepted")}
+                  onDismiss={(n) => respondToNudge(n, "dismissed")}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Match Day Banner */}
         {fixture && matchTime && !matchTime.isPast && (
@@ -380,6 +502,20 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Ask assistant bubble */}
+      <Pressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/assistant-chat" as never); }}
+        style={({ pressed }) => [
+          styles.askBubble,
+          { backgroundColor: colors.primary, bottom: (Platform.OS === "web" ? 90 : insets.bottom + 90), opacity: pressed ? 0.85 : 1 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Ask the RewLo assistant"
+      >
+        <Ionicons name="sparkles" size={18} color="#fff" />
+        <Text style={styles.askBubbleText}>Ask</Text>
+      </Pressable>
     </View>
   );
 }
@@ -395,6 +531,17 @@ const styles = StyleSheet.create({
   clubBadge: { borderRadius: 24, overflow: "hidden", borderWidth: 2, borderColor: "rgba(0,229,204,0.7)" },
   emptyActivity: { padding: 20, textAlign: "center", fontSize: 13, fontFamily: "Inter_400Regular" },
   notifBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  notifBadge: { position: "absolute", top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
+  notifBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
+  nudgeCard: { borderRadius: 18, borderWidth: 1.5, padding: 14, gap: 12 },
+  nudgeTop: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  nudgeIcon: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  nudgeTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  nudgeBody: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17, marginTop: 2 },
+  nudgeCta: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, paddingVertical: 10 },
+  nudgeCtaText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  askBubble: { position: "absolute", right: 20, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 26, paddingHorizontal: 18, paddingVertical: 13, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  askBubbleText: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   balanceCard: {
     borderRadius: 22,
     padding: 22,

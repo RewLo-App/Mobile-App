@@ -6,8 +6,17 @@
  * OpenAPI spec version: 1.0.0
  */
 
+export * from './assistantChatHistory';
+export * from './assistantChatHistoryMessagesItem';
+export * from './assistantChatRequest';
+export * from './assistantChatResponse';
+export * from './assistantLink';
+export * from './assistantNudge';
+export * from './assistantNudgeList';
+export * from './assistantNudgeStatus';
 export * from './authenticatedUser';
 export * from './authenticatedUserWalletProvisioningStatus';
+export * from './createAssistantRuleBody';
 export * from './currentUser';
 export * from './forgotPasswordRequest';
 export * from './genericMessage';
@@ -17,5 +26,8 @@ export * from './refreshRequest';
 export * from './registerRequest';
 export * from './registerResponse';
 export * from './resetPasswordRequest';
+export * from './respondToNudgeBody';
+export * from './respondToNudgeBodyAction';
 export * from './tokenPair';
 export * from './tokenResponse';
+export * from './updateAssistantRuleBody';

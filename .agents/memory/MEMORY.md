@@ -1,1 +1,2 @@
 - [API base path v1](api-base-path.md) — backend mounts all routes at /api/v1; generated client and any hand-written fetches must use /api/v1 or requests 404.
+- [Drizzle push constraint names](drizzle-push-constraint-names.md) — TTY-prompt failures on db push mean constraint-name mismatch; rename constraints in SQL, never truncate.

@@ -20,6 +20,11 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AssistantChatHistory,
+  AssistantChatRequest,
+  AssistantChatResponse,
+  AssistantNudgeList,
+  CreateAssistantRuleBody,
   CurrentUser,
   ForgotPasswordRequest,
   GenericMessage,
@@ -29,7 +34,9 @@ import type {
   RegisterRequest,
   RegisterResponse,
   ResetPasswordRequest,
-  TokenResponse
+  RespondToNudgeBody,
+  TokenResponse,
+  UpdateAssistantRuleBody
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -556,6 +563,806 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
 
 
+
+export const getAssistantChatUrl = () => {
+
+
+
+
+  return `/api/v1/assistant/chat`
+}
+
+/**
+ * @summary Ask the RewLo assistant a question grounded in real wallet data
+ */
+export const assistantChat = async (assistantChatRequest: AssistantChatRequest, options?: RequestInit): Promise<AssistantChatResponse> => {
+
+  return customFetch<AssistantChatResponse>(getAssistantChatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(assistantChatRequest)
+  }
+);}
+
+
+
+
+export const getAssistantChatMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistantChat>>, TError,{data: BodyType<AssistantChatRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assistantChat>>, TError,{data: BodyType<AssistantChatRequest>}, TContext> => {
+
+const mutationKey = ['assistantChat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assistantChat>>, {data: BodyType<AssistantChatRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  assistantChat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssistantChatMutationResult = NonNullable<Awaited<ReturnType<typeof assistantChat>>>
+    export type AssistantChatMutationBody = BodyType<AssistantChatRequest>
+    export type AssistantChatMutationError = ErrorType<void>
+
+    /**
+ * @summary Ask the RewLo assistant a question grounded in real wallet data
+ */
+export const useAssistantChat = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistantChat>>, TError,{data: BodyType<AssistantChatRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assistantChat>>,
+        TError,
+        {data: BodyType<AssistantChatRequest>},
+        TContext
+      > => {
+      return useMutation(getAssistantChatMutationOptions(options));
+    }
+
+export const getAssistantChatHistoryUrl = () => {
+
+
+
+
+  return `/api/v1/assistant/chat/history`
+}
+
+/**
+ * @summary Get the most recent assistant conversation
+ */
+export const assistantChatHistory = async ( options?: RequestInit): Promise<AssistantChatHistory> => {
+
+  return customFetch<AssistantChatHistory>(getAssistantChatHistoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getAssistantChatHistoryQueryKey = () => {
+    return [
+    `/api/v1/assistant/chat/history`
+    ] as const;
+    }
+
+
+export const getAssistantChatHistoryQueryOptions = <TData = Awaited<ReturnType<typeof assistantChatHistory>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof assistantChatHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAssistantChatHistoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof assistantChatHistory>>> = ({ signal }) => assistantChatHistory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assistantChatHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type AssistantChatHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof assistantChatHistory>>>
+export type AssistantChatHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the most recent assistant conversation
+ */
+
+export function useAssistantChatHistory<TData = Awaited<ReturnType<typeof assistantChatHistory>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof assistantChatHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getAssistantChatHistoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAssistantNudgesUrl = () => {
+
+
+
+
+  return `/api/v1/assistant/nudges`
+}
+
+/**
+ * @summary Generate and list active in-app nudges
+ */
+export const listAssistantNudges = async ( options?: RequestInit): Promise<AssistantNudgeList> => {
+
+  return customFetch<AssistantNudgeList>(getListAssistantNudgesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAssistantNudgesQueryKey = () => {
+    return [
+    `/api/v1/assistant/nudges`
+    ] as const;
+    }
+
+
+export const getListAssistantNudgesQueryOptions = <TData = Awaited<ReturnType<typeof listAssistantNudges>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssistantNudges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAssistantNudgesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssistantNudges>>> = ({ signal }) => listAssistantNudges({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAssistantNudges>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAssistantNudgesQueryResult = NonNullable<Awaited<ReturnType<typeof listAssistantNudges>>>
+export type ListAssistantNudgesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Generate and list active in-app nudges
+ */
+
+export function useListAssistantNudges<TData = Awaited<ReturnType<typeof listAssistantNudges>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssistantNudges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAssistantNudgesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRespondToNudgeUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/assistant/nudges/${id}/respond`
+}
+
+/**
+ * @summary Mark a nudge seen, accepted, or dismissed
+ */
+export const respondToNudge = async (id: number,
+    respondToNudgeBody: RespondToNudgeBody, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRespondToNudgeUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(respondToNudgeBody)
+  }
+);}
+
+
+
+
+export const getRespondToNudgeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof respondToNudge>>, TError,{id: number;data: BodyType<RespondToNudgeBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof respondToNudge>>, TError,{id: number;data: BodyType<RespondToNudgeBody>}, TContext> => {
+
+const mutationKey = ['respondToNudge'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof respondToNudge>>, {id: number;data: BodyType<RespondToNudgeBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  respondToNudge(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RespondToNudgeMutationResult = NonNullable<Awaited<ReturnType<typeof respondToNudge>>>
+    export type RespondToNudgeMutationBody = BodyType<RespondToNudgeBody>
+    export type RespondToNudgeMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark a nudge seen, accepted, or dismissed
+ */
+export const useRespondToNudge = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof respondToNudge>>, TError,{id: number;data: BodyType<RespondToNudgeBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof respondToNudge>>,
+        TError,
+        {id: number;data: BodyType<RespondToNudgeBody>},
+        TContext
+      > => {
+      return useMutation(getRespondToNudgeMutationOptions(options));
+    }
+
+export const getListAssistantRulesUrl = () => {
+
+
+
+
+  return `/api/v1/assistant/rules`
+}
+
+/**
+ * @summary List the fan's standing rules
+ */
+export const listAssistantRules = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getListAssistantRulesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAssistantRulesQueryKey = () => {
+    return [
+    `/api/v1/assistant/rules`
+    ] as const;
+    }
+
+
+export const getListAssistantRulesQueryOptions = <TData = Awaited<ReturnType<typeof listAssistantRules>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssistantRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAssistantRulesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssistantRules>>> = ({ signal }) => listAssistantRules({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAssistantRules>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAssistantRulesQueryResult = NonNullable<Awaited<ReturnType<typeof listAssistantRules>>>
+export type ListAssistantRulesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the fan's standing rules
+ */
+
+export function useListAssistantRules<TData = Awaited<ReturnType<typeof listAssistantRules>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssistantRules>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAssistantRulesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAssistantRuleUrl = () => {
+
+
+
+
+  return `/api/v1/assistant/rules`
+}
+
+/**
+ * @summary Create a plain-language standing rule (AI-parsed)
+ */
+export const createAssistantRule = async (createAssistantRuleBody: CreateAssistantRuleBody, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCreateAssistantRuleUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createAssistantRuleBody)
+  }
+);}
+
+
+
+
+export const getCreateAssistantRuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAssistantRule>>, TError,{data: BodyType<CreateAssistantRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAssistantRule>>, TError,{data: BodyType<CreateAssistantRuleBody>}, TContext> => {
+
+const mutationKey = ['createAssistantRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAssistantRule>>, {data: BodyType<CreateAssistantRuleBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAssistantRule(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAssistantRuleMutationResult = NonNullable<Awaited<ReturnType<typeof createAssistantRule>>>
+    export type CreateAssistantRuleMutationBody = BodyType<CreateAssistantRuleBody>
+    export type CreateAssistantRuleMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a plain-language standing rule (AI-parsed)
+ */
+export const useCreateAssistantRule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAssistantRule>>, TError,{data: BodyType<CreateAssistantRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAssistantRule>>,
+        TError,
+        {data: BodyType<CreateAssistantRuleBody>},
+        TContext
+      > => {
+      return useMutation(getCreateAssistantRuleMutationOptions(options));
+    }
+
+export const getUpdateAssistantRuleUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/assistant/rules/${id}`
+}
+
+/**
+ * @summary Pause or resume a standing rule
+ */
+export const updateAssistantRule = async (id: number,
+    updateAssistantRuleBody: UpdateAssistantRuleBody, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUpdateAssistantRuleUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateAssistantRuleBody)
+  }
+);}
+
+
+
+
+export const getUpdateAssistantRuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAssistantRule>>, TError,{id: number;data: BodyType<UpdateAssistantRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAssistantRule>>, TError,{id: number;data: BodyType<UpdateAssistantRuleBody>}, TContext> => {
+
+const mutationKey = ['updateAssistantRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAssistantRule>>, {id: number;data: BodyType<UpdateAssistantRuleBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAssistantRule(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAssistantRuleMutationResult = NonNullable<Awaited<ReturnType<typeof updateAssistantRule>>>
+    export type UpdateAssistantRuleMutationBody = BodyType<UpdateAssistantRuleBody>
+    export type UpdateAssistantRuleMutationError = ErrorType<void>
+
+    /**
+ * @summary Pause or resume a standing rule
+ */
+export const useUpdateAssistantRule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAssistantRule>>, TError,{id: number;data: BodyType<UpdateAssistantRuleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAssistantRule>>,
+        TError,
+        {id: number;data: BodyType<UpdateAssistantRuleBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateAssistantRuleMutationOptions(options));
+    }
+
+export const getDeleteAssistantRuleUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/assistant/rules/${id}`
+}
+
+/**
+ * @summary Delete a standing rule
+ */
+export const deleteAssistantRule = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAssistantRuleUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAssistantRuleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAssistantRule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAssistantRule>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAssistantRule'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAssistantRule>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAssistantRule(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAssistantRuleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAssistantRule>>>
+
+    export type DeleteAssistantRuleMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a standing rule
+ */
+export const useDeleteAssistantRule = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAssistantRule>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAssistantRule>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAssistantRuleMutationOptions(options));
+    }
+
+export const getListDraftedActionsUrl = () => {
+
+
+
+
+  return `/api/v1/assistant/drafted-actions`
+}
+
+/**
+ * @summary Match rules against offers and list drafted redemptions awaiting consent
+ */
+export const listDraftedActions = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getListDraftedActionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDraftedActionsQueryKey = () => {
+    return [
+    `/api/v1/assistant/drafted-actions`
+    ] as const;
+    }
+
+
+export const getListDraftedActionsQueryOptions = <TData = Awaited<ReturnType<typeof listDraftedActions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDraftedActions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDraftedActionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDraftedActions>>> = ({ signal }) => listDraftedActions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDraftedActions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDraftedActionsQueryResult = NonNullable<Awaited<ReturnType<typeof listDraftedActions>>>
+export type ListDraftedActionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Match rules against offers and list drafted redemptions awaiting consent
+ */
+
+export function useListDraftedActions<TData = Awaited<ReturnType<typeof listDraftedActions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDraftedActions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDraftedActionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getConfirmDraftedActionUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/assistant/drafted-actions/${id}/confirm`
+}
+
+/**
+ * @summary Explicitly confirm a drafted redemption (the only path that moves money)
+ */
+export const confirmDraftedAction = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getConfirmDraftedActionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getConfirmDraftedActionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmDraftedAction>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmDraftedAction>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['confirmDraftedAction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmDraftedAction>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  confirmDraftedAction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmDraftedActionMutationResult = NonNullable<Awaited<ReturnType<typeof confirmDraftedAction>>>
+
+    export type ConfirmDraftedActionMutationError = ErrorType<void>
+
+    /**
+ * @summary Explicitly confirm a drafted redemption (the only path that moves money)
+ */
+export const useConfirmDraftedAction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmDraftedAction>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof confirmDraftedAction>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getConfirmDraftedActionMutationOptions(options));
+    }
+
+export const getDismissDraftedActionUrl = (id: number,) => {
+
+
+
+
+  return `/api/v1/assistant/drafted-actions/${id}/dismiss`
+}
+
+/**
+ * @summary Dismiss a drafted redemption
+ */
+export const dismissDraftedAction = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDismissDraftedActionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getDismissDraftedActionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissDraftedAction>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dismissDraftedAction>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['dismissDraftedAction'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dismissDraftedAction>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  dismissDraftedAction(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DismissDraftedActionMutationResult = NonNullable<Awaited<ReturnType<typeof dismissDraftedAction>>>
+
+    export type DismissDraftedActionMutationError = ErrorType<void>
+
+    /**
+ * @summary Dismiss a drafted redemption
+ */
+export const useDismissDraftedAction = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissDraftedAction>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dismissDraftedAction>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDismissDraftedActionMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

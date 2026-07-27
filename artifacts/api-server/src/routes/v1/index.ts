@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import assistantRouter from "../assistant";
 import authRouter from "../auth";
 import commerceRouter from "../commerce";
 import emailRouter from "../email";
@@ -15,5 +16,6 @@ v1Router.use(emailRouter);
 v1Router.use(registerRouter);
 v1Router.use(walletRouter);
 v1Router.use(commerceRouter);
+v1Router.use(assistantRouter);
 
 export default v1Router;

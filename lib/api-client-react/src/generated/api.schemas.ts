@@ -5,6 +5,60 @@
  * Version 1 API for RewLo wallet, rewards, payments, and account operations.
  * OpenAPI spec version: 1.0.0
  */
+export interface AssistantChatRequest {
+  /** @maxLength 1000 */
+  message: string;
+  conversationId?: number | null;
+}
+
+export interface AssistantLink {
+  label: string;
+  route: string;
+  offerId?: number;
+}
+
+export interface AssistantChatResponse {
+  conversationId: number;
+  reply: string;
+  links: AssistantLink[];
+}
+
+export type AssistantChatHistoryMessagesItem = {
+  id: number;
+  role: string;
+  content: string;
+  links: AssistantLink[];
+  createdAt?: string;
+};
+
+export interface AssistantChatHistory {
+  conversationId: number | null;
+  messages: AssistantChatHistoryMessagesItem[];
+}
+
+export type AssistantNudgeStatus = typeof AssistantNudgeStatus[keyof typeof AssistantNudgeStatus];
+
+
+export const AssistantNudgeStatus = {
+  pending: 'pending',
+  seen: 'seen',
+} as const;
+
+export interface AssistantNudge {
+  id: number;
+  kind: string;
+  title: string;
+  body: string;
+  offerId?: number | null;
+  status: AssistantNudgeStatus;
+  createdAt?: string;
+}
+
+export interface AssistantNudgeList {
+  nudges: AssistantNudge[];
+  unseenCount: number;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }
@@ -95,4 +149,26 @@ export interface RegisterResponse {
 export interface HealthStatus {
   status: string;
 }
+
+export type RespondToNudgeBodyAction = typeof RespondToNudgeBodyAction[keyof typeof RespondToNudgeBodyAction];
+
+
+export const RespondToNudgeBodyAction = {
+  seen: 'seen',
+  accepted: 'accepted',
+  dismissed: 'dismissed',
+} as const;
+
+export type RespondToNudgeBody = {
+  action: RespondToNudgeBodyAction;
+};
+
+export type CreateAssistantRuleBody = {
+  /** @maxLength 500 */
+  ruleText: string;
+};
+
+export type UpdateAssistantRuleBody = {
+  active: boolean;
+};
 
