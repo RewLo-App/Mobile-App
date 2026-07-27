@@ -135,6 +135,18 @@ export default function TopUp() {
                 )}
               </Pressable>
             ))}
+            <View style={s.amountRow}>
+              <Text style={[s.currency, { color: c.foreground }]}>$</Text>
+              <TextInput
+                editable={!confirm}
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor={c.mutedForeground}
+                style={[s.amount, { color: c.foreground }]}
+              />
+            </View>
             <View style={s.quickRow}>
               {QUICK_AMOUNTS.map((q) => {
                 const active = amount === String(q);
@@ -162,18 +174,6 @@ export default function TopUp() {
                   </Pressable>
                 );
               })}
-            </View>
-            <View style={s.amountRow}>
-              <Text style={[s.currency, { color: c.foreground }]}>$</Text>
-              <TextInput
-                editable={!confirm}
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor={c.mutedForeground}
-                style={[s.amount, { color: c.foreground }]}
-              />
             </View>
             <Text style={[s.conversion, { color: c.primary }]}>
               {valid ? `You'll receive ${value.toFixed(2)} RWLO` : "1 USD = 1 RWLO"}
@@ -270,7 +270,7 @@ const s = StyleSheet.create({
   quickRow: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 22,
+    marginTop: 18,
   },
   quickBtn: {
     flex: 1,
