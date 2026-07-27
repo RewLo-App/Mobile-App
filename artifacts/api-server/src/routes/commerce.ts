@@ -433,10 +433,73 @@ router.get("/merchants/:code", async (req: AuthenticatedRequest, res) => {
   }
   res.json(merchant);
 });
+// RewLo Pay agentic commerce: 1 loyalty point = 1 cent when applied to a payment.
+const POINT_VALUE_CENTS = 1;
+
+/**
+ * Proposes the best combination of loyalty points and wallet cash for a
+ * merchant payment. Never charges anything — the fan approves the plan at
+ * checkout before /wallet/merchant-pay executes it.
+ */
+router.post("/wallet/pay-plan", async (req: AuthenticatedRequest, res) => {
+  const id = authenticatedUserId(req)!;
+  const amount = money(req.body?.amount);
+  const code = String(req.body?.merchantCode ?? "").toUpperCase();
+  if (!amount) {
+    res.status(400).json({ error: "Enter a valid amount" });
+    return;
+  }
+  const [user] = await db
+    .select({ points: usersTable.rewloPoints, balanceCents: usersTable.rewloCashBalance })
+    .from(usersTable)
+    .where(eq(usersTable.id, id));
+  const [merchant] = await db
+    .select({ name: merchantsTable.merchantName })
+    .from(merchantsTable)
+    .where(eq(merchantsTable.merchantCode, code));
+  if (!user || !merchant) {
+    res.status(404).json({ error: "Merchant not found" });
+    return;
+  }
+  // Best combination: apply as many points as possible (capped at the bill),
+  // cover the remainder with cash.
+  const pointsToApply = Math.min(user.points, Math.floor(amount.cents / POINT_VALUE_CENTS));
+  const pointsValueCents = pointsToApply * POINT_VALUE_CENTS;
+  const cashCents = amount.cents - pointsValueCents;
+  if (cashCents > user.balanceCents) {
+    res.status(409).json({
+      error: "Not enough points and cash combined to cover this payment",
+      shortfallCents: cashCents - user.balanceCents,
+    });
+    return;
+  }
+  res.json({
+    merchant: merchant.name,
+    amountCents: amount.cents,
+    pointsToApply,
+    pointsValueCents,
+    cashCents,
+    pointsBalance: user.points,
+    cashBalanceCents: user.balanceCents,
+    rationale:
+      pointsToApply === 0
+        ? "You have no points to apply, so this payment uses cash only."
+        : cashCents === 0
+          ? `Your points fully cover this payment — no cash needed.`
+          : `Applying ${pointsToApply.toLocaleString()} points saves you $${(pointsValueCents / 100).toFixed(2)} in cash.`,
+  });
+});
+
 router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
   const id = authenticatedUserId(req)!;
   const amount = money(req.body?.amount);
   const code = String(req.body?.merchantCode ?? "").toUpperCase();
+  const rawPoints = req.body?.pointsToApply;
+  if (rawPoints !== undefined && (!Number.isSafeInteger(rawPoints) || rawPoints < 0)) {
+    res.status(400).json({ error: "pointsToApply must be a non-negative integer" });
+    return;
+  }
+  const pointsToApply = (rawPoints as number | undefined) ?? 0;
   if (!id) {
     res.status(401).json({ error: "User identity is required" });
     return;
@@ -445,6 +508,13 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
     res.status(400).json({ error: "Enter a valid amount" });
     return;
   }
+  const pointsValueCents = pointsToApply * POINT_VALUE_CENTS;
+  if (pointsValueCents > amount.cents) {
+    res.status(400).json({ error: "Points applied exceed the payment amount" });
+    return;
+  }
+  const cashCents = amount.cents - pointsValueCents;
+  const cashText = (cashCents / 100).toFixed(2);
   try {
     // BraleService records its provider audit entry through a separate DB
     // connection. Resolve the transfer outside a transaction so that audit
@@ -458,38 +528,56 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
       .from(merchantsTable)
       .where(eq(merchantsTable.merchantCode, code));
     if (!preflightUser || !preflightMerchant) throw new Error("NOT_FOUND");
-    if (preflightUser.balanceCents < amount.cents) throw new Error("INSUFFICIENT_BALANCE");
-    if (!preflightUser.braleAddressId || !preflightMerchant.braleAddressId) throw new Error("WALLET_NOT_CONFIGURED");
+    if (preflightUser.balanceCents < cashCents) throw new Error("INSUFFICIENT_BALANCE");
+    if (pointsToApply > 0) {
+      const [pointsUser] = await db
+        .select({ points: usersTable.rewloPoints })
+        .from(usersTable)
+        .where(eq(usersTable.id, id));
+      if (!pointsUser || pointsUser.points < pointsToApply) throw new Error("INSUFFICIENT_POINTS");
+    }
+    if (cashCents > 0 && (!preflightUser.braleAddressId || !preflightMerchant.braleAddressId))
+      throw new Error("WALLET_NOT_CONFIGURED");
 
     const reference = randomUUID();
-    const brale = await new BraleService().transferStablecoin({
-      userId: id,
-      sourceAddressId: preflightUser.braleAddressId,
-      destinationAddressId: preflightMerchant.braleAddressId,
-      amount: { value: amount.text, currency: "USD" },
-      idempotencyKey: reference,
-    });
+    // Only the cash portion moves on-chain; the points portion is a loyalty credit.
+    const brale =
+      cashCents > 0
+        ? await new BraleService().transferStablecoin({
+            userId: id,
+            // Non-null: WALLET_NOT_CONFIGURED is thrown above when cashCents > 0 and either is missing.
+            sourceAddressId: preflightUser.braleAddressId!,
+            destinationAddressId: preflightMerchant.braleAddressId!,
+            amount: { value: cashText, currency: "USD" },
+            idempotencyKey: reference,
+          })
+        : null;
 
     const result = await db.transaction(async (tx) => {
       const locked = await tx.execute(
-        sql`SELECT id, rewlo_cash_balance, brale_address_id FROM users WHERE id=${id} FOR UPDATE`,
+        sql`SELECT id, rewlo_cash_balance, rewlo_points, brale_address_id FROM users WHERE id=${id} FOR UPDATE`,
       );
       const user = locked.rows[0] as
-        | { rewlo_cash_balance: number; brale_address_id: string | null }
+        | { rewlo_cash_balance: number; rewlo_points: number; brale_address_id: string | null }
         | undefined;
       const [merchant] = await tx
         .select()
         .from(merchantsTable)
         .where(eq(merchantsTable.merchantCode, code));
       if (!user || !merchant) throw new Error("NOT_FOUND");
-      if (user.rewlo_cash_balance < amount.cents)
+      if (user.rewlo_cash_balance < cashCents)
         throw new Error("INSUFFICIENT_BALANCE");
-      if (!user.brale_address_id || !merchant.braleAddressId)
+      if (user.rewlo_points < pointsToApply)
+        throw new Error("INSUFFICIENT_POINTS");
+      if (cashCents > 0 && (!user.brale_address_id || !merchant.braleAddressId))
         throw new Error("WALLET_NOT_CONFIGURED");
       await tx
         .update(usersTable)
         .set({
-          rewloCashBalance: sql`${usersTable.rewloCashBalance}-${amount.cents}`,
+          rewloCashBalance: sql`${usersTable.rewloCashBalance}-${cashCents}`,
+          ...(pointsToApply > 0
+            ? { rewloPoints: sql`${usersTable.rewloPoints}-${pointsToApply}` }
+            : {}),
         })
         .where(eq(usersTable.id, id));
       await tx
@@ -505,17 +593,37 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
           merchantId: merchant.id,
           type: "merchant_payment",
           status: "completed",
-          amountCents: -amount.cents,
+          amountCents: -cashCents,
           reference: `${reference}:payment`,
           externalTransactionId: externalId(brale),
-          description: `Payment to ${merchant.merchantName}`,
-          metadata: { provider: "brale", braleResponse: brale },
+          description:
+            pointsToApply > 0
+              ? `Payment to ${merchant.merchantName} (${pointsToApply.toLocaleString()} pts applied)`
+              : `Payment to ${merchant.merchantName}`,
+          metadata: {
+            provider: "brale",
+            braleResponse: brale,
+            pointsApplied: pointsToApply,
+            pointsValueCents,
+            totalCents: amount.cents,
+          },
         });
+      if (pointsToApply > 0) {
+        await tx.insert(rewardTransactionsTable).values({
+          userId: id,
+          pointsDelta: -pointsToApply,
+          reason: `Points applied to payment at ${merchant.merchantName}`,
+          reference: `${reference}:points`,
+        });
+      }
       return {
         reference,
         merchant: merchant.merchantName,
         amount: amount.text,
-        balanceCents: user.rewlo_cash_balance - amount.cents,
+        cashCents,
+        pointsApplied: pointsToApply,
+        balanceCents: user.rewlo_cash_balance - cashCents,
+        pointsBalance: user.rewlo_points - pointsToApply,
         externalTransactionId: externalId(brale),
       };
     });
@@ -525,12 +633,14 @@ router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
     const providerError = e instanceof BraleApiError ? e : null;
     res
       .status(
-        m === "INSUFFICIENT_BALANCE" || m === "WALLET_NOT_CONFIGURED" ? 409 : m === "NOT_FOUND" ? 404 : 502,
+        m === "INSUFFICIENT_BALANCE" || m === "INSUFFICIENT_POINTS" || m === "WALLET_NOT_CONFIGURED" ? 409 : m === "NOT_FOUND" ? 404 : 502,
       )
       .json({
         error:
           m === "INSUFFICIENT_BALANCE"
             ? "Insufficient balance"
+            : m === "INSUFFICIENT_POINTS"
+              ? "Not enough points"
             : m === "NOT_FOUND"
               ? "Merchant not found"
               : m === "WALLET_NOT_CONFIGURED"
