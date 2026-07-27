@@ -257,7 +257,7 @@ const s = StyleSheet.create({
     marginTop: 26,
   },
   currency: { fontSize: 38 },
-  amount: { fontSize: 56, fontFamily: "Inter_700Bold", minWidth: 160 },
+  amount: { fontSize: 56, fontFamily: "Inter_700Bold", minWidth: 160, maxWidth: 240, textAlign: "center" },
   amountText: { fontSize: 48, fontFamily: "Inter_700Bold" },
   note: { textAlign: "center", fontSize: 13 },
   conversion: {
