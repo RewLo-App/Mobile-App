@@ -11,7 +11,7 @@ type TxType="all"|"send"|"receive"|"top_up"|"reward_earned"|"reward_redeemed"|"m
 type Status="all"|"pending"|"completed"|"failed"|"reversed";
 type LedgerItem={id:string;type:Exclude<TxType,"all">;status:Exclude<Status,"all">;amountCents:number;pointsDelta:number;description:string;reference:string;externalTransactionId:string|null;merchant:string|null;createdAt:string};
 type Page={items:LedgerItem[];pagination:{page:number;hasMore:boolean;total:number}};
-const FILTERS:Array<{key:TxType;label:string}>=[{key:"all",label:"All"},{key:"send",label:"Sent"},{key:"receive",label:"Received"},{key:"top_up",label:"Top Up"},{key:"reward_earned",label:"Rewards +"},{key:"reward_redeemed",label:"Rewards −"},{key:"merchant_payment",label:"Payments"},{key:"mint",label:"Mint"},{key:"burn",label:"Burn"}];
+const FILTERS:Array<{key:TxType;label:string}>=[{key:"all",label:"All"},{key:"send",label:"Sent"},{key:"receive",label:"Received"},{key:"top_up",label:"Top Up"},{key:"reward_earned",label:"Rewards +"},{key:"reward_redeemed",label:"Rewards −"},{key:"merchant_payment",label:"Payments"},{key:"burn",label:"Burn"}];
 const ICONS:Record<string,{name:keyof typeof Ionicons.glyphMap;color:string}>={send:{name:"arrow-up-circle",color:"#EF4444"},receive:{name:"arrow-down-circle",color:"#22C55E"},top_up:{name:"add-circle",color:"#22C55E"},reward_earned:{name:"star",color:"#F59E0B"},reward_redeemed:{name:"gift",color:"#F59E0B"},merchant_payment:{name:"card",color:"#3B82F6"},mint:{name:"logo-usd",color:"#00E5CC"},burn:{name:"flame",color:"#F97316"}};
 const STATUS_COLORS:Record<string,string>={completed:"#22C55E",pending:"#F59E0B",failed:"#EF4444",reversed:"#94A3B8"};
 

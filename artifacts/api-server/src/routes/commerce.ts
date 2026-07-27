@@ -75,7 +75,8 @@ router.get("/wallet/transactions", async (req: AuthenticatedRequest, res) => {
   const filter = String(req.query.type ?? "all").toLowerCase();
   const status = String(req.query.status ?? "all").toLowerCase();
   const search = String(req.query.search ?? "").trim();
-  const allowedTypes = new Set(["all", "send", "receive", "top_up", "reward_earned", "reward_redeemed", "merchant_payment", "mint", "burn"]);
+  // "mint" is a behind-the-scenes Brale operation and is intentionally hidden from fans.
+  const allowedTypes = new Set(["all", "send", "receive", "top_up", "reward_earned", "reward_redeemed", "merchant_payment", "burn"]);
   const allowedStatuses = new Set(["all", "pending", "completed", "failed", "reversed"]);
   if (!allowedTypes.has(filter) || !allowedStatuses.has(status)) { res.status(400).json({ error: "Invalid transaction filter" }); return; }
   const rows = await db.execute(sql`
@@ -88,7 +89,7 @@ router.get("/wallet/transactions", async (req: AuthenticatedRequest, res) => {
         m.merchant_name AS merchant
       FROM wallet_transactions wt LEFT JOIN merchants m ON m.id=wt.merchant_id
       WHERE wt.user_id=${id}
-        AND wt.type IN ('send','receive','top_up','reward','redeem','merchant_payment','mint','burn')
+        AND wt.type IN ('send','receive','top_up','reward','redeem','merchant_payment','burn')
         AND NOT (wt.type='redeem' AND EXISTS (SELECT 1 FROM offer_redemptions r WHERE r.user_id=wt.user_id AND r.reference=wt.reference))
       UNION ALL
       SELECT 'reward-' || rt.id, CASE WHEN rt.points_delta >= 0 THEN 'reward_earned' ELSE 'reward_redeemed' END,

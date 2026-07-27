@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   nudgeBody: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17, marginTop: 2 },
   nudgeCta: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, paddingVertical: 10 },
   nudgeCtaText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  askBubble: { position: "absolute", right: 20, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 26, paddingHorizontal: 18, paddingVertical: 13, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  askBubble: { position: "absolute", left: 20, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 26, paddingHorizontal: 18, paddingVertical: 13, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   askBubbleText: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   balanceCard: {
     borderRadius: 22,
