@@ -64,7 +64,7 @@ export const getRegisterUrl = () => {
 
 
 
-  return `/api/auth/register`
+  return `/api/v1/auth/register`
 }
 
 /**
@@ -135,7 +135,7 @@ export const getLoginUrl = () => {
 
 
 
-  return `/api/auth/login`
+  return `/api/v1/auth/login`
 }
 
 /**
@@ -205,7 +205,7 @@ export const getForgotPasswordUrl = () => {
 
 
 
-  return `/api/auth/forgot-password`
+  return `/api/v1/auth/forgot-password`
 }
 
 /**
@@ -275,7 +275,7 @@ export const getResetPasswordUrl = () => {
 
 
 
-  return `/api/auth/reset-password`
+  return `/api/v1/auth/reset-password`
 }
 
 /**
@@ -345,7 +345,7 @@ export const getRefreshSessionUrl = () => {
 
 
 
-  return `/api/auth/refresh`
+  return `/api/v1/auth/refresh`
 }
 
 /**
@@ -415,7 +415,7 @@ export const getLogoutUrl = () => {
 
 
 
-  return `/api/auth/logout`
+  return `/api/v1/auth/logout`
 }
 
 /**
@@ -485,7 +485,7 @@ export const getGetCurrentUserUrl = () => {
 
 
 
-  return `/api/auth/me`
+  return `/api/v1/auth/me`
 }
 
 /**
@@ -508,7 +508,7 @@ export const getCurrentUser = async ( options?: RequestInit): Promise<CurrentUse
 
 export const getGetCurrentUserQueryKey = () => {
     return [
-    `/api/auth/me`
+    `/api/v1/auth/me`
     ] as const;
     }
 
@@ -562,7 +562,7 @@ export const getHealthCheckUrl = () => {
 
 
 
-  return `/api/healthz`
+  return `/api/v1/healthz`
 }
 
 /**
@@ -586,7 +586,7 @@ export const healthCheck = async ( options?: RequestInit): Promise<HealthStatus>
 
 export const getHealthCheckQueryKey = () => {
     return [
-    `/api/healthz`
+    `/api/v1/healthz`
     ] as const;
     }
 

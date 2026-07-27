@@ -1,0 +1,1 @@
+- [API base path v1](api-base-path.md) — backend mounts all routes at /api/v1; generated client and any hand-written fetches must use /api/v1 or requests 404.
