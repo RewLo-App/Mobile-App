@@ -212,9 +212,11 @@ export default function HomeScreen() {
             </View>
             <Text style={styles.balanceLabel}>Total Balance</Text>
             <Text style={styles.balanceAmount}>
-              {balanceVisible ? `$${balance.toFixed(2)}` : "••••••"}
+              {balanceVisible ? `${balance.toFixed(2)} RWLO` : "••••••"}
             </Text>
-            <Text style={styles.balanceCurrency}>RewLo Cash · Early Access Preview</Text>
+            <Text style={styles.balanceCurrency}>
+              {balanceVisible ? `≈ $${balance.toFixed(2)} · 1 USD = 1 RWLO` : "RewLo Cash · Early Access Preview"}
+            </Text>
             <View style={styles.pointsRow}>
               <Ionicons name="star" size={14} color="#F59E0B" />
               <Text style={styles.pointsText}>

@@ -46,6 +46,7 @@ export default function TopUp() {
       })
       .catch((e) => setError(apiErrorMessage(e, "Could not load your payment cards")));
   }, []);
+  const QUICK_AMOUNTS = [10, 25, 50, 100];
   const value = Number(amount),
     valid = value > 0 && Number.isFinite(value),
     canSubmit = valid && selected !== null;
@@ -88,7 +89,10 @@ export default function TopUp() {
               Wallet topped up
             </Text>
             <Text style={[s.amountText, { color: c.foreground }]}>
-              ${value.toFixed(2)}
+              {value.toFixed(2)} RWLO
+            </Text>
+            <Text style={[s.note, { color: c.mutedForeground }]}>
+              ${value.toFixed(2)} added · 1 USD = 1 RWLO
             </Text>
             <Button label="Done" onPress={() => router.back()} />
           </View>
@@ -131,6 +135,34 @@ export default function TopUp() {
                 )}
               </Pressable>
             ))}
+            <View style={s.quickRow}>
+              {QUICK_AMOUNTS.map((q) => {
+                const active = amount === String(q);
+                return (
+                  <Pressable
+                    key={q}
+                    disabled={confirm}
+                    onPress={() => setAmount(String(q))}
+                    style={[
+                      s.quickBtn,
+                      {
+                        backgroundColor: active ? c.primary : c.card,
+                        borderColor: active ? c.primary : c.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        s.quickText,
+                        { color: active ? "#041120" : c.foreground },
+                      ]}
+                    >
+                      ${q}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <View style={s.amountRow}>
               <Text style={[s.currency, { color: c.foreground }]}>$</Text>
               <TextInput
@@ -143,8 +175,11 @@ export default function TopUp() {
                 style={[s.amount, { color: c.foreground }]}
               />
             </View>
+            <Text style={[s.conversion, { color: c.primary }]}>
+              {valid ? `You'll receive ${value.toFixed(2)} RWLO` : "1 USD = 1 RWLO"}
+            </Text>
             <Text style={[s.note, { color: c.mutedForeground }]}>
-              Use your Rewlo Premium card to add funds securely.
+              1 USD = 1 RWLO · Use your Rewlo Premium card to add funds securely.
             </Text>
             <Button
               disabled={!canSubmit || loading}
@@ -225,6 +260,27 @@ const s = StyleSheet.create({
   amount: { fontSize: 56, fontFamily: "Inter_700Bold", minWidth: 160 },
   amountText: { fontSize: 48, fontFamily: "Inter_700Bold" },
   note: { textAlign: "center", fontSize: 13 },
+  conversion: {
+    textAlign: "center",
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  quickRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 22,
+  },
+  quickBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  quickText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
   button: {
     height: 56,
     borderRadius: 16,
