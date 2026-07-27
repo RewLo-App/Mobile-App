@@ -135,6 +135,7 @@ export default function HomeScreen() {
   } = useWallet();
   const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const [loyaltyExpanded, setLoyaltyExpanded] = useState(false);
   const [profileLoading, setProfileLoading] = useState(!authenticatedUser);
   const [profileError, setProfileError] = useState<string | null>(null);
 
@@ -457,14 +458,18 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <View style={[styles.loyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {(followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId]).map((clubId, idx, arr) => {
+            {(() => {
+              const allClubs = followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId];
+              const visible = loyaltyExpanded ? allClubs : allClubs.slice(0, 1);
+              return visible.map((clubId, idx) => {
+                const arr = allClubs;
               const club = getClubById(clubId);
               const ptsShare = arr.length === 1 ? 1 : idx === 0 ? 0.78 : 0.22;
               const profilePoints = authenticatedUser?.rewloPoints ?? 0;
               const clubPts = Math.round(profilePoints * ptsShare);
               const maxPts = Math.round(profilePoints * (arr.length === 1 ? 1 : 0.78));
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
-              const isLast = idx === arr.length - 1;
+              const isLast = idx === visible.length - 1;
               const entry = { club, ptsShare };
               return (
                 <View
@@ -498,7 +503,19 @@ export default function HomeScreen() {
                   </View>
                 </View>
               );
-            })}
+              });
+            })()}
+            {(followedClubIds.length > 1) && (
+              <Pressable
+                onPress={() => setLoyaltyExpanded((v) => !v)}
+                style={[styles.loyaltyExpandBtn, { borderTopColor: colors.border }]}
+              >
+                <Text style={[styles.loyaltyExpandText, { color: colors.primary }]}>
+                  {loyaltyExpanded ? "Hide other clubs" : "Show other clubs"}
+                </Text>
+                <Ionicons name={loyaltyExpanded ? "chevron-up" : "chevron-down"} size={16} color={colors.primary} />
+              </Pressable>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -586,6 +603,8 @@ const styles = StyleSheet.create({
   todayPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.25)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   upcomingPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   loyaltyCard: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
+  loyaltyExpandBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  loyaltyExpandText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   loyaltyRow: { flexDirection: "row", alignItems: "center", padding: 14, gap: 14 },
   loyaltyInfo: { flex: 1, gap: 5 },
   loyaltyTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
