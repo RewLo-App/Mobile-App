@@ -144,7 +144,13 @@ export default function TopUp() {
                 keyboardType="decimal-pad"
                 placeholder="0.00"
                 placeholderTextColor={c.mutedForeground}
-                style={[s.amount, { color: c.foreground }]}
+                style={[
+                  s.amount,
+                  {
+                    color: c.foreground,
+                    width: Math.max((amount || "0.00").length, 4) * 34,
+                  },
+                ]}
               />
             </View>
             <View style={s.quickRow}>
@@ -256,8 +262,8 @@ const s = StyleSheet.create({
     alignItems: "center",
     marginTop: 26,
   },
-  currency: { fontSize: 38 },
-  amount: { fontSize: 56, fontFamily: "Inter_700Bold", minWidth: 160, maxWidth: 240, textAlign: "center" },
+  currency: { fontSize: 38, marginRight: 6 },
+  amount: { fontSize: 56, fontFamily: "Inter_700Bold", textAlign: "left" },
   amountText: { fontSize: 48, fontFamily: "Inter_700Bold" },
   note: { textAlign: "center", fontSize: 13 },
   conversion: {
