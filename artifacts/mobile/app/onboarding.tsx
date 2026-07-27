@@ -67,9 +67,9 @@ function getApiErrorStatus(error: unknown): number | null {
 }
 
 // ── Progress bar ─────────────────────────────────────────────────
-function ProgressBar({ step }: { step: number }) {
+function ProgressBar({ step, compact }: { step: number; compact?: boolean }) {
   return (
-    <View style={pb.row}>
+    <View style={[pb.row, compact && pb.rowCompact]}>
       {[1, 2, 3].map((s) => (
         <View
           key={s}
@@ -84,6 +84,7 @@ function ProgressBar({ step }: { step: number }) {
 }
 const pb = StyleSheet.create({
   row: { flexDirection: "row", gap: 6, paddingHorizontal: 24, marginBottom: 20 },
+  rowCompact: { paddingRight: 112 },
   seg: { flex: 1, height: 3, borderRadius: 3 },
 });
 
@@ -245,7 +246,19 @@ export default function OnboardingScreen() {
           </Pressable>
         )}
 
-        {step < 4 && <ProgressBar step={step as 1 | 2 | 3} />}
+        {step < 4 && <ProgressBar step={step as 1 | 2 | 3} compact={step === 1} />}
+
+        {step === 1 && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Sign in to an existing account"
+            onPress={() => router.replace("/login")}
+            style={({ pressed }) => [s.signInButton, { top: topPad + 10, opacity: pressed ? 0.75 : 1 }]}
+          >
+            <Text style={s.signInPrompt}>Have an account?</Text>
+            <Text style={s.signInLabel}>Sign in</Text>
+          </Pressable>
+        )}
 
         {step === 1 && <Step1
           leagues={US_LEAGUES}
@@ -759,6 +772,17 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  signInButton: {
+    position: "absolute",
+    right: 20,
+    zIndex: 10,
+    height: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  signInPrompt: { color: MUTED, fontSize: 12, fontWeight: "500" as const },
+  signInLabel: { color: LOGO_CYAN, fontSize: 13, fontWeight: "700" as const },
   logoArea: { alignItems: "center", paddingHorizontal: 24, gap: 6, marginBottom: 16 },
   stepTitle: { fontSize: 22, fontWeight: "700" as const, color: WHITE, textAlign: "center" as const },
   stepSub: { fontSize: 14, color: MUTED, textAlign: "center" as const },
