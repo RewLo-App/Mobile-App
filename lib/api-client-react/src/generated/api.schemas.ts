@@ -92,7 +92,66 @@ export interface RegisterResponse {
   tokens: TokenPair;
 }
 
+export type MerchantOverviewMerchant = {
+  code: string;
+  name: string;
+};
+
+export type MerchantOverviewRange = {
+  key?: string;
+  from?: string;
+  to?: string;
+};
+
+export type MerchantOverviewMetrics = {
+  rwloIssued?: number;
+  rwloRedeemed?: number;
+  rwloInCirculation?: number;
+  netFloatCents?: number;
+  netFloatLabel?: string;
+  netFloatBasis?: string;
+};
+
+export type MerchantOverviewTransfers = {
+  inPoints?: number;
+  outPoints?: number;
+  pendingCount?: number;
+  pendingPoints?: number;
+};
+
+export type MerchantOverviewSettlements = { [key: string]: unknown };
+
+export type MerchantOverviewAlertsItem = { [key: string]: unknown };
+
+export type MerchantOverviewTimeSeriesItem = { [key: string]: unknown };
+
+export interface MerchantOverview {
+  merchant: MerchantOverviewMerchant;
+  range: MerchantOverviewRange;
+  metrics: MerchantOverviewMetrics;
+  transfers: MerchantOverviewTransfers;
+  settlements: MerchantOverviewSettlements;
+  alerts: MerchantOverviewAlertsItem[];
+  timeSeries: MerchantOverviewTimeSeriesItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }
+
+export type GetMerchantOverviewParams = {
+range?: GetMerchantOverviewRange;
+from?: string;
+to?: string;
+};
+
+export type GetMerchantOverviewRange = typeof GetMerchantOverviewRange[keyof typeof GetMerchantOverviewRange];
+
+
+export const GetMerchantOverviewRange = {
+  '7d': '7d',
+  '30d': '30d',
+  '90d': '90d',
+  custom: 'custom',
+} as const;
 

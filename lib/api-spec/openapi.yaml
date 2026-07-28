@@ -131,6 +131,32 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CurrentUser" }
         "401": { description: Authentication is required }
+  /merchant/overview:
+    get:
+      operationId: getMerchantOverview
+      tags: [merchant]
+      summary: Get the authenticated merchant's aggregate overview
+      description: Returns only the merchant resolved from the bearer token's active membership. Raw loyalty-ledger entries are not exposed.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: range
+          in: query
+          schema: { type: string, enum: [7d, 30d, 90d, custom], default: 30d }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Merchant overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MerchantOverview" }
+        "400": { description: Invalid date range }
+        "401": { description: Authentication is required }
+        "403": { description: Merchant role and active merchant membership are required }
   /healthz:
     get:
       operationId: healthCheck
@@ -269,6 +295,32 @@ components:
           $ref: "#/components/schemas/AuthenticatedUser"
         tokens:
           $ref: "#/components/schemas/TokenPair"
+    MerchantOverview:
+      type: object
+      required: [merchant, range, metrics, transfers, settlements, alerts, timeSeries]
+      properties:
+        merchant:
+          type: object
+          required: [code, name]
+          properties: { code: { type: string }, name: { type: string } }
+        range:
+          type: object
+          properties: { key: { type: string }, from: { type: string, format: date-time }, to: { type: string, format: date-time } }
+        metrics:
+          type: object
+          properties:
+            rwloIssued: { type: integer }
+            rwloRedeemed: { type: integer }
+            rwloInCirculation: { type: integer }
+            netFloatCents: { type: integer }
+            netFloatLabel: { type: string }
+            netFloatBasis: { type: string }
+        transfers:
+          type: object
+          properties: { inPoints: { type: integer }, outPoints: { type: integer }, pendingCount: { type: integer }, pendingPoints: { type: integer } }
+        settlements: { type: object }
+        alerts: { type: array, items: { type: object } }
+        timeSeries: { type: array, items: { type: object } }
     HealthStatus:
       type: object
       properties:

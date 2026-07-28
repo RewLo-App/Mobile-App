@@ -7,3 +7,4 @@ export {
   setAuthRefreshHandler,
 } from "./custom-fetch";
 export type { AuthTokenGetter, AuthRefreshHandler } from "./custom-fetch";
+export { QueryClient, QueryClientProvider } from "@tanstack/react-query";

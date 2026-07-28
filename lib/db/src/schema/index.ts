@@ -6,3 +6,6 @@ export * from "./wallet-transactions";
 export * from "./rewards";
 export * from "./auth-tokens";
 export * from "./relations";
+export * from "./merchant-loyalty";
+export * from "./merchant-users";
+export * from "./merchant-loyalty-issuance";
