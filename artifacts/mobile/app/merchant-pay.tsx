@@ -23,7 +23,7 @@ type PayPlan = {
 export default function MerchantPay() {
   const c = useColors(),
     i = useSafeAreaInsets(),
-    { balance, refreshWallet } = useWallet();
+    { balance, refreshWallet, authenticatedUser } = useWallet();
   const [code, setCode] = useState(""),
     [merchant, setMerchant] = useState<Merchant | null>(null),
     [amount, setAmount] = useState(""),
@@ -178,6 +178,41 @@ export default function MerchantPay() {
                 <Text style={[s.sub, { color: c.mutedForeground }]}>
                   Scan a QR code or enter the merchant code
                 </Text>
+                <LinearGradient
+                  colors={["#0B3B8F", "#1D4ED8", "#00B8A9"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.agentCard}
+                >
+                  <View style={s.agentBadge}>
+                    <Ionicons name="sparkles" size={13} color="#00E5CC" />
+                    <Text style={s.agentBadgeText}>AGENTIC CHECKOUT</Text>
+                  </View>
+                  <Text style={s.agentSub}>
+                    Your assistant builds the best split — points first, then cash, and any remainder goes securely to card.
+                  </Text>
+                  <View style={s.agentLegs}>
+                    <View style={s.agentLeg}>
+                      <Ionicons name="star" size={14} color="#F59E0B" />
+                      <Text style={s.agentLegLabel}>Points</Text>
+                      <Text style={s.agentLegValue}>
+                        {authenticatedUser ? `$${(authenticatedUser.rewloPoints / 100).toFixed(2)}` : "—"}
+                      </Text>
+                    </View>
+                    <View style={s.agentLegDivider} />
+                    <View style={s.agentLeg}>
+                      <Ionicons name="wallet-outline" size={14} color="#00E5CC" />
+                      <Text style={s.agentLegLabel}>Cash</Text>
+                      <Text style={s.agentLegValue}>${balance.toFixed(2)}</Text>
+                    </View>
+                    <View style={s.agentLegDivider} />
+                    <View style={s.agentLeg}>
+                      <Ionicons name="card-outline" size={14} color="#93C5FD" />
+                      <Text style={s.agentLegLabel}>Card</Text>
+                      <Text style={s.agentLegValue}>via Stripe</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
                 <Pressable
                   onPress={() => router.push("/scan")}
                   style={[
@@ -366,6 +401,15 @@ const s = StyleSheet.create({
   content: { padding: 22 },
   heading: { fontSize: 25, fontFamily: "Inter_700Bold", marginBottom: 8 },
   sub: { fontSize: 14, textAlign: "center", marginBottom: 22 },
+  agentCard: { borderRadius: 20, padding: 16, gap: 10, marginBottom: 22 },
+  agentBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.25)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, alignSelf: "flex-start" },
+  agentBadgeText: { color: "#00E5CC", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  agentSub: { color: "rgba(255,255,255,0.78)", fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  agentLegs: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 14, paddingVertical: 12 },
+  agentLeg: { flex: 1, alignItems: "center", gap: 3 },
+  agentLegDivider: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.25)" },
+  agentLegLabel: { color: "rgba(255,255,255,0.6)", fontSize: 10, fontFamily: "Inter_500Medium", textTransform: "uppercase" as const, letterSpacing: 0.6 },
+  agentLegValue: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   scan: {
     height: 64,
     borderRadius: 17,

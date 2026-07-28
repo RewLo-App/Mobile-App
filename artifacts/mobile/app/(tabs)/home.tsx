@@ -21,6 +21,22 @@ import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
 import { assistantApi, type AssistantNudge } from "@/utils/assistantApi";
 
+// Merchant affinity per club: club-owned venues/experiences first, then the
+// club's kit sponsor. Used to personalize the cardholder offers rail on home.
+const CLUB_MERCHANT_AFFINITY: Record<string, string[]> = {
+  "man-city": ["Manchester City", "Etihad", "Puma"],
+  "arsenal": ["Arsenal", "Emirates", "Adidas"],
+  "chelsea": ["Chelsea", "Stamford Bridge", "Nike"],
+  "liverpool": ["Liverpool", "Anfield", "Nike"],
+  "man-utd": ["Manchester United", "Old Trafford", "Adidas"],
+  "tottenham": ["Tottenham", "Nike"],
+  "barcelona": ["Barcelona", "Camp Nou", "Nike"],
+  "real-madrid": ["Real Madrid", "Bernabeu", "Adidas"],
+  "psg": ["PSG", "Paris", "Nike"],
+  "juventus": ["Juventus", "Adidas"],
+  "dortmund": ["Dortmund", "Puma"],
+};
+
 const NUDGE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   expiring_offer: "time-outline",
   category_habit: "repeat-outline",
@@ -130,6 +146,7 @@ export default function HomeScreen() {
     followedClubIds,
     isRestoringSession,
     isAuthenticated,
+    offers,
     getCurrentUser,
     refreshWallet,
   } = useWallet();
@@ -243,6 +260,23 @@ export default function HomeScreen() {
 
   const recent = transactions.slice(0, 4);
 
+  // Rank offers for the selected club's cardholders: club venues & kit sponsor
+  // first, then stadium/sports offers as a fallback so the rail never feels empty.
+  const clubOffers = React.useMemo(() => {
+    const available = offers.filter((o) => !o.redeemed);
+    const affinity = CLUB_MERCHANT_AFFINITY[selectedClubId] ?? [];
+    const score = (merchant: string, category: string) => {
+      const idx = affinity.findIndex((k) => merchant.toLowerCase().includes(k.toLowerCase()));
+      if (idx >= 0) return idx;
+      if (category === "Stadium" || category === "Experiences") return 50;
+      if (category === "Sports" || category === "Merchandise") return 60;
+      return 100;
+    };
+    return [...available]
+      .sort((a, b) => score(a.merchant, a.category) - score(b.merchant, b.category))
+      .slice(0, 3);
+  }, [offers, selectedClubId]);
+
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
   return (
@@ -352,57 +386,51 @@ export default function HomeScreen() {
           </View>
         </LinearGradient>
 
-        {/* RewLo Pay — Agentic Commerce */}
-        <View style={styles.section}>
-          <Pressable
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/merchant-pay" as never); }}
-            accessibilityRole="button"
-            accessibilityLabel="Pay a merchant with RewLo Pay"
-            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
-          >
-            <LinearGradient
-              colors={["#0B3B8F", "#1D4ED8", "#00B8A9"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.payCard}
-            >
-              <View style={styles.payCardHeader}>
-                <View style={styles.payCardBadge}>
-                  <Ionicons name="sparkles" size={13} color="#00E5CC" />
-                  <Text style={styles.payCardBadgeText}>AGENTIC CHECKOUT</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.8)" />
-              </View>
-              <Text style={styles.payCardTitle}>Pay with RewLo Pay</Text>
-              <Text style={styles.payCardSub}>
-                Your assistant builds the best split — points first, then cash, and any remainder goes securely to card.
+        {/* Cardholder Offers — personalized to the selected club */}
+        {clubOffers.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+                {selectedClub.shortName} cardholder offers
               </Text>
-              <View style={styles.payCardLegs}>
-                <View style={styles.payLeg}>
-                  <Ionicons name="star" size={14} color="#F59E0B" />
-                  <Text style={styles.payLegLabel}>Points</Text>
-                  <Text style={styles.payLegValue}>
-                    {authenticatedUser
-                      ? `$${(authenticatedUser.rewloPoints / 100).toFixed(2)}`
-                      : "—"}
-                  </Text>
-                </View>
-                <View style={styles.payLegDivider} />
-                <View style={styles.payLeg}>
-                  <Ionicons name="wallet-outline" size={14} color="#00E5CC" />
-                  <Text style={styles.payLegLabel}>Cash</Text>
-                  <Text style={styles.payLegValue}>${balance.toFixed(2)}</Text>
-                </View>
-                <View style={styles.payLegDivider} />
-                <View style={styles.payLeg}>
-                  <Ionicons name="card-outline" size={14} color="#93C5FD" />
-                  <Text style={styles.payLegLabel}>Card</Text>
-                  <Text style={styles.payLegValue}>via Stripe</Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </Pressable>
-        </View>
+              <Pressable onPress={() => router.push("/(tabs)/rewards")}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>See all</Text>
+              </Pressable>
+            </View>
+            <View style={{ gap: 10 }}>
+              {clubOffers.map((offer) => (
+                <Pressable
+                  key={offer.id}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/rewards"); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${offer.merchant}: ${offer.description}`}
+                  style={({ pressed }) => [
+                    styles.offerCard,
+                    { backgroundColor: colors.card, borderColor: `${selectedClub.accentColor}44`, opacity: pressed ? 0.85 : 1 },
+                  ]}
+                >
+                  <View style={[styles.offerIcon, { backgroundColor: `${selectedClub.accentColor}22` }]}>
+                    <Ionicons name="pricetag" size={18} color={selectedClub.accentColor} />
+                  </View>
+                  <View style={styles.offerInfo}>
+                    <Text style={[styles.offerMerchant, { color: colors.foreground }]} numberOfLines={1}>
+                      {offer.merchant}
+                    </Text>
+                    <Text style={[styles.offerDesc, { color: colors.mutedForeground }]} numberOfLines={1}>
+                      {offer.description}
+                    </Text>
+                    <Text style={[styles.offerPoints, { color: colors.mutedForeground }]}>
+                      {offer.pointsCost.toLocaleString()} pts
+                    </Text>
+                  </View>
+                  <View style={[styles.offerDiscountPill, { backgroundColor: `${selectedClub.accentColor}22`, borderColor: `${selectedClub.accentColor}55` }]}>
+                    <Text style={[styles.offerDiscountText, { color: selectedClub.accentColor }]}>{offer.discount}</Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Assistant Nudges */}
         {nudges.length > 0 && (
@@ -641,17 +669,14 @@ const styles = StyleSheet.create({
   txDesc: { fontSize: 14, fontFamily: "Inter_500Medium" },
   txMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
   txAmount: { fontSize: 14, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
-  payCard: { borderRadius: 20, padding: 18, gap: 8 },
-  payCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  payCardBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.25)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
-  payCardBadgeText: { color: "#00E5CC", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
-  payCardTitle: { color: "#fff", fontSize: 19, fontFamily: "Inter_700Bold" },
-  payCardSub: { color: "rgba(255,255,255,0.78)", fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
-  payCardLegs: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 14, paddingVertical: 12, marginTop: 6 },
-  payLeg: { flex: 1, alignItems: "center", gap: 3 },
-  payLegDivider: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.25)" },
-  payLegLabel: { color: "rgba(255,255,255,0.6)", fontSize: 10, fontFamily: "Inter_500Medium", textTransform: "uppercase" as const, letterSpacing: 0.6 },
-  payLegValue: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
+  offerCard: { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
+  offerIcon: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  offerInfo: { flex: 1, gap: 2 },
+  offerMerchant: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  offerDesc: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  offerPoints: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  offerDiscountPill: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  offerDiscountText: { fontSize: 11, fontFamily: "Inter_700Bold" },
   matchdayBanner: { borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center" },
   matchdayLeft: { flex: 1, gap: 5 },
   matchdayRight: { paddingLeft: 12 },
