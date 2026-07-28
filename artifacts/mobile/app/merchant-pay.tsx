@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiErrorDialog } from "@/components/ApiErrorDialog";
 import { useColors } from "@/hooks/useColors";
@@ -15,6 +15,7 @@ type PayPlan = {
   pointsToApply: number;
   pointsValueCents: number;
   cashCents: number;
+  cardCents: number;
   pointsBalance: number;
   cashBalanceCents: number;
   rationale: string;
@@ -31,6 +32,7 @@ export default function MerchantPay() {
     [loading, setLoading] = useState(false),
     [paid, setPaid] = useState(false),
     [paidPoints, setPaidPoints] = useState(0),
+    [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null),
     [error, setError] = useState<string | null>(null);
   const dollars = Number(amount),
     valid = dollars > 0;
@@ -63,6 +65,46 @@ export default function MerchantPay() {
       setError(apiErrorMessage(e, "Couldn't build a payment plan"));
     } finally {
       setPlanLoading(false);
+    }
+  }
+  async function startCardCheckout(pointsToApply: number) {
+    if (!merchant || !valid) return;
+    setLoading(true);
+    try {
+      const session = await walletRequest<{ sessionId: string; url: string }>(
+        "/api/wallet/stripe-checkout-session",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            merchantCode: merchant.code,
+            amount: dollars.toFixed(2),
+            ...(pointsToApply > 0 ? { pointsToApply } : {}),
+          }),
+        },
+      );
+      setCheckoutSessionId(session.sessionId);
+      setPaidPoints(pointsToApply);
+      await Linking.openURL(session.url);
+    } catch (e) {
+      setError(apiErrorMessage(e, "Couldn't start card payment"));
+    } finally {
+      setLoading(false);
+    }
+  }
+  async function finishCardCheckout() {
+    if (!checkoutSessionId) return;
+    setLoading(true);
+    try {
+      await walletRequest("/api/wallet/stripe-checkout-complete", {
+        method: "POST",
+        body: JSON.stringify({ sessionId: checkoutSessionId }),
+      });
+      await refreshWallet();
+      setPaid(true);
+    } catch (e) {
+      setError(apiErrorMessage(e, "Card payment isn't complete yet — finish it in your browser, then try again"));
+    } finally {
+      setLoading(false);
     }
   }
   async function pay(pointsToApply: number) {
@@ -192,7 +234,7 @@ export default function MerchantPay() {
                   <TextInput
                     editable={!plan}
                     value={amount}
-                    onChangeText={(t) => { setAmount(t); setPlan(null); }}
+                    onChangeText={(t) => { setAmount(t); setPlan(null); setCheckoutSessionId(null); }}
                     keyboardType="decimal-pad"
                     placeholder="0.00"
                     placeholderTextColor={c.mutedForeground}
@@ -227,6 +269,14 @@ export default function MerchantPay() {
                           ${(plan.cashCents / 100).toFixed(2)}
                         </Text>
                       </View>
+                      {plan.cardCents > 0 && (
+                        <View style={s.planRow}>
+                          <Text style={{ color: c.mutedForeground }}>Card (via Stripe)</Text>
+                          <Text style={[s.planValue, { color: c.foreground }]}>
+                            ${(plan.cardCents / 100).toFixed(2)}
+                          </Text>
+                        </View>
+                      )}
                       <View style={[s.planRow, s.planTotalRow, { borderTopColor: c.border }]}>
                         <Text style={[s.planValue, { color: c.foreground }]}>Total</Text>
                         <Text style={[s.planValue, { color: c.foreground }]}>
@@ -237,11 +287,29 @@ export default function MerchantPay() {
                         {plan.rationale}
                       </Text>
                     </View>
-                    <Button
-                      disabled={loading}
-                      label={loading ? "Paying…" : `Approve & Pay $${(plan.amountCents / 100).toFixed(2)}`}
-                      onPress={() => pay(plan.pointsToApply)}
-                    />
+                    {checkoutSessionId ? (
+                      <Button
+                        disabled={loading}
+                        label={loading ? "Checking…" : "I've paid — finish payment"}
+                        onPress={finishCardCheckout}
+                      />
+                    ) : (
+                      <Button
+                        disabled={loading}
+                        label={
+                          loading
+                            ? "Paying…"
+                            : plan.cardCents > 0
+                              ? `Approve & Pay $${(plan.amountCents / 100).toFixed(2)} (card for $${(plan.cardCents / 100).toFixed(2)})`
+                              : `Approve & Pay $${(plan.amountCents / 100).toFixed(2)}`
+                        }
+                        onPress={() =>
+                          plan.cardCents > 0
+                            ? startCardCheckout(plan.pointsToApply)
+                            : pay(plan.pointsToApply)
+                        }
+                      />
+                    )}
                     {plan.pointsToApply > 0 && (
                       <Pressable
                         disabled={loading || plan.amountCents / 100 > balance}

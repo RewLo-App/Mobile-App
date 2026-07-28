@@ -13,6 +13,7 @@ import {
   walletTransactionsTable,
 } from "@workspace/db";
 import BraleService, { BraleApiError } from "../services/brale-service";
+import { getUncachableStripeClient } from "../stripeClient";
 import { requireAuth, requireRole, type AuthenticatedRequest } from "../middleware/auth";
 import { redeemOfferForUser } from "../services/redemption-service";
 import { authenticatedUserId } from "../middleware/identity";
@@ -465,29 +466,233 @@ router.post("/wallet/pay-plan", async (req: AuthenticatedRequest, res) => {
   // cover the remainder with cash.
   const pointsToApply = Math.min(user.points, Math.floor(amount.cents / POINT_VALUE_CENTS));
   const pointsValueCents = pointsToApply * POINT_VALUE_CENTS;
-  const cashCents = amount.cents - pointsValueCents;
-  if (cashCents > user.balanceCents) {
-    res.status(409).json({
-      error: "Not enough points and cash combined to cover this payment",
-      shortfallCents: cashCents - user.balanceCents,
-    });
-    return;
-  }
+  const remainderCents = amount.cents - pointsValueCents;
+  // Cash covers what points can't; any final shortfall is funded by card via Stripe.
+  const cashCents = Math.min(remainderCents, user.balanceCents);
+  const cardCents = remainderCents - cashCents;
   res.json({
     merchant: merchant.name,
     amountCents: amount.cents,
     pointsToApply,
     pointsValueCents,
     cashCents,
+    cardCents,
     pointsBalance: user.points,
     cashBalanceCents: user.balanceCents,
     rationale:
-      pointsToApply === 0
-        ? "You have no points to apply, so this payment uses cash only."
-        : cashCents === 0
-          ? `Your points fully cover this payment — no cash needed.`
-          : `Applying ${pointsToApply.toLocaleString()} points saves you $${(pointsValueCents / 100).toFixed(2)} in cash.`,
+      cardCents > 0
+        ? `Points and wallet cash cover $${((amount.cents - cardCents) / 100).toFixed(2)} — the remaining $${(cardCents / 100).toFixed(2)} is paid securely by card.`
+        : pointsToApply === 0
+          ? "You have no points to apply, so this payment uses cash only."
+          : cashCents === 0
+            ? `Your points fully cover this payment — no cash needed.`
+            : `Applying ${pointsToApply.toLocaleString()} points saves you $${(pointsValueCents / 100).toFixed(2)} in cash.`,
   });
+});
+
+/**
+ * Creates a Stripe Checkout session for the card-funded portion of a payment.
+ * The dynamic per-payment amount is intentionally created inline — merchant
+ * bills are arbitrary amounts, not catalog products.
+ */
+router.post("/wallet/stripe-checkout-session", async (req: AuthenticatedRequest, res) => {
+  const id = authenticatedUserId(req)!;
+  const amount = money(req.body?.amount);
+  const code = String(req.body?.merchantCode ?? "").toUpperCase();
+  const rawPoints = req.body?.pointsToApply;
+  if (!amount) { res.status(400).json({ error: "Enter a valid amount" }); return; }
+  if (rawPoints !== undefined && (!Number.isSafeInteger(rawPoints) || rawPoints < 0)) {
+    res.status(400).json({ error: "pointsToApply must be a non-negative integer" });
+    return;
+  }
+  const pointsToApply = (rawPoints as number | undefined) ?? 0;
+  if (pointsToApply * POINT_VALUE_CENTS > amount.cents) {
+    res.status(400).json({ error: "Points applied exceed the payment amount" });
+    return;
+  }
+  const [user] = await db
+    .select({ points: usersTable.rewloPoints, balanceCents: usersTable.rewloCashBalance })
+    .from(usersTable)
+    .where(eq(usersTable.id, id));
+  const [merchant] = await db
+    .select({ name: merchantsTable.merchantName })
+    .from(merchantsTable)
+    .where(eq(merchantsTable.merchantCode, code));
+  if (!user || !merchant) { res.status(404).json({ error: "Merchant not found" }); return; }
+  if (user.points < pointsToApply) { res.status(409).json({ error: "Not enough points" }); return; }
+  const remainderCents = amount.cents - pointsToApply * POINT_VALUE_CENTS;
+  const cashCents = Math.min(remainderCents, user.balanceCents);
+  const cardCents = remainderCents - cashCents;
+  if (cardCents <= 0) {
+    res.status(400).json({ error: "No card payment needed — points and cash cover this payment" });
+    return;
+  }
+  try {
+    const stripe = await getUncachableStripeClient();
+    const baseUrl = `https://${process.env["REPLIT_DOMAINS"]?.split(",")[0]}`;
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: cardCents,
+            product_data: { name: `RewLo Pay — ${merchant.name}` },
+          },
+        },
+      ],
+      metadata: {
+        userId: id,
+        merchantCode: code,
+        amountCents: String(amount.cents),
+        pointsToApply: String(pointsToApply),
+        cashCents: String(cashCents),
+        cardCents: String(cardCents),
+      },
+      success_url: `${baseUrl}/api/stripe/return?status=success`,
+      cancel_url: `${baseUrl}/api/stripe/return?status=cancelled`,
+    });
+    res.status(201).json({ sessionId: session.id, url: session.url, cardCents });
+  } catch (e) {
+    req.log.error({ e }, "Stripe checkout session creation failed");
+    res.status(502).json({ error: "Could not start card payment" });
+  }
+});
+
+/**
+ * Completes a card-assisted payment after the fan pays the Stripe Checkout
+ * session. Verifies the session is paid, then settles points + wallet cash and
+ * credits the merchant in one transaction. Idempotent by session id.
+ */
+router.post("/wallet/stripe-checkout-complete", async (req: AuthenticatedRequest, res) => {
+  const id = authenticatedUserId(req)!;
+  const sessionId = String(req.body?.sessionId ?? "");
+  if (!sessionId.startsWith("cs_")) {
+    res.status(400).json({ error: "A valid sessionId is required" });
+    return;
+  }
+  try {
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const meta = session.metadata ?? {};
+    if (meta.userId !== String(id)) { res.status(404).json({ error: "Payment session not found" }); return; }
+    if (session.payment_status !== "paid") {
+      res.status(409).json({ error: "Card payment not completed yet", paymentStatus: session.payment_status });
+      return;
+    }
+    const totalCents = Number(meta.amountCents);
+    const pointsToApply = Number(meta.pointsToApply);
+    const cashCents = Number(meta.cashCents);
+    const cardCents = Number(meta.cardCents);
+    const code = String(meta.merchantCode ?? "");
+    if (![totalCents, pointsToApply, cashCents, cardCents].every(Number.isSafeInteger) || session.amount_total !== cardCents) {
+      res.status(409).json({ error: "Payment session data mismatch" });
+      return;
+    }
+    const result = await db.transaction(async (tx) => {
+      // Lock the user row FIRST so concurrent completions serialize, then the
+      // idempotency check below reliably sees any prior settlement.
+      const locked = await tx.execute(
+        sql`SELECT id, rewlo_cash_balance, rewlo_points FROM users WHERE id=${id} FOR UPDATE`,
+      );
+      // Idempotency: a completed session settles exactly once.
+      const prior = await tx.execute(
+        sql`SELECT id FROM wallet_transactions WHERE reference=${`${sessionId}:payment`} LIMIT 1`,
+      );
+      if (prior.rows[0]) return { alreadySettled: true };
+      const user = locked.rows[0] as { rewlo_cash_balance: number; rewlo_points: number } | undefined;
+      const [merchant] = await tx.select().from(merchantsTable).where(eq(merchantsTable.merchantCode, code));
+      if (!user || !merchant) throw new Error("NOT_FOUND");
+      if (user.rewlo_cash_balance < cashCents) throw new Error("INSUFFICIENT_BALANCE");
+      if (user.rewlo_points < pointsToApply) throw new Error("INSUFFICIENT_POINTS");
+      await tx
+        .update(usersTable)
+        .set({
+          rewloCashBalance: sql`${usersTable.rewloCashBalance}-${cashCents}`,
+          ...(pointsToApply > 0 ? { rewloPoints: sql`${usersTable.rewloPoints}-${pointsToApply}` } : {}),
+        })
+        .where(eq(usersTable.id, id));
+      await tx
+        .update(merchantsTable)
+        .set({ rewloCashBalance: sql`${merchantsTable.rewloCashBalance}+${totalCents}` })
+        .where(eq(merchantsTable.id, merchant.id));
+      await tx.insert(walletTransactionsTable).values({
+        userId: id,
+        merchantId: merchant.id,
+        type: "merchant_payment",
+        status: "completed",
+        amountCents: -cashCents,
+        reference: `${sessionId}:payment`,
+        externalTransactionId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+        description:
+          `Payment to ${merchant.merchantName} ($${(cardCents / 100).toFixed(2)} by card` +
+          (pointsToApply > 0 ? `, ${pointsToApply.toLocaleString()} pts applied)` : ")"),
+        metadata: {
+          provider: "stripe",
+          stripeSessionId: sessionId,
+          pointsApplied: pointsToApply,
+          pointsValueCents: pointsToApply * POINT_VALUE_CENTS,
+          cashCents,
+          cardCents,
+          totalCents,
+        },
+      });
+      if (pointsToApply > 0) {
+        await tx.insert(rewardTransactionsTable).values({
+          userId: id,
+          pointsDelta: -pointsToApply,
+          reason: `Points applied to payment at ${merchant.merchantName}`,
+          reference: `${sessionId}:points`,
+        });
+      }
+      return {
+        alreadySettled: false,
+        reference: sessionId,
+        merchant: merchant.merchantName,
+        amount: (totalCents / 100).toFixed(2),
+        cashCents,
+        cardCents,
+        pointsApplied: pointsToApply,
+        balanceCents: user.rewlo_cash_balance - cashCents,
+        pointsBalance: user.rewlo_points - pointsToApply,
+      };
+    });
+    res.status(result.alreadySettled ? 200 : 201).json(result);
+  } catch (e) {
+    const m = e instanceof Error ? e.message : "";
+    req.log.error({ e }, "Stripe checkout completion failed");
+    // The wallet split was frozen when the session was created. If the fan's
+    // points/cash have since dropped below it, the card charge is refunded so
+    // they are never charged without a settled payment.
+    if (m === "INSUFFICIENT_BALANCE" || m === "INSUFFICIENT_POINTS") {
+      let refunded = false;
+      try {
+        const stripe = await getUncachableStripeClient();
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (typeof session.payment_intent === "string") {
+          await stripe.refunds.create({ payment_intent: session.payment_intent });
+          refunded = true;
+        }
+      } catch (refundError) {
+        req.log.error({ refundError, sessionId }, "Automatic refund after failed settlement did not succeed");
+      }
+      res.status(409).json({
+        error:
+          (m === "INSUFFICIENT_BALANCE"
+            ? "Your wallet balance changed since this payment was planned"
+            : "Your points balance changed since this payment was planned") +
+          (refunded
+            ? " — the card payment has been refunded. Please try again."
+            : " — we could not refund the card payment automatically; please contact support."),
+        refunded,
+      });
+      return;
+    }
+    res.status(m === "NOT_FOUND" ? 404 : 502).json({
+      error: m === "NOT_FOUND" ? "Merchant not found" : "Could not complete card payment",
+    });
+  }
 });
 
 router.post("/wallet/merchant-pay", async (req: AuthenticatedRequest, res) => {
