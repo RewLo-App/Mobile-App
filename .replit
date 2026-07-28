@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "postgresql-16", "python-3.11"]
+modules = ["nodejs-24", "python-3.11", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -28,3 +28,15 @@ channel = "stable-25_05"
 [userenv.shared]
 RESEND_FROM_DOMAIN = "rewlo.io"
 RESET_EMAIL_FROM = "RewLo <security@example.com>"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 18115
+externalPort = 80

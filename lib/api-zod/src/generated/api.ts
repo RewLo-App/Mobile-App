@@ -141,6 +141,27 @@ export const GetCurrentUserResponse = zod.object({
 
 
 /**
+
+ * @summary Ask the RewLo assistant a question grounded in real wallet data
+ */
+export const assistantChatBodyMessageMax = 1000;
+
+
+
+export const AssistantChatBody = zod.object({
+  "message": zod.string().max(assistantChatBodyMessageMax),
+  "conversationId": zod.number().nullish()
+})
+
+export const AssistantChatResponse = zod.object({
+  "conversationId": zod.number(),
+  "reply": zod.string(),
+  "links": zod.array(zod.object({
+  "label": zod.string(),
+  "route": zod.string(),
+  "offerId": zod.number().optional()
+}))
+
  * Returns only the merchant resolved from the bearer token's active membership. Raw loyalty-ledger entries are not exposed.
  * @summary Get the authenticated merchant's aggregate overview
  */
@@ -186,6 +207,127 @@ export const GetMerchantOverviewResponse = zod.object({
 
 }).passthrough())
 })
+
+
+/**
+
+ * @summary Get the most recent assistant conversation
+ */
+export const AssistantChatHistoryResponse = zod.object({
+  "conversationId": zod.number().nullable(),
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "role": zod.string(),
+  "content": zod.string(),
+  "links": zod.array(zod.object({
+  "label": zod.string(),
+  "route": zod.string(),
+  "offerId": zod.number().optional()
+})),
+  "createdAt": zod.coerce.date().optional()
+}))
+})
+
+
+/**
+ * @summary Generate and list active in-app nudges
+ */
+export const ListAssistantNudgesResponse = zod.object({
+  "nudges": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "offerId": zod.number().nullish(),
+  "status": zod.enum(['pending', 'seen']),
+  "createdAt": zod.coerce.date().optional()
+})),
+  "unseenCount": zod.number()
+})
+
+
+/**
+ * @summary Mark a nudge seen, accepted, or dismissed
+ */
+export const RespondToNudgeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RespondToNudgeBody = zod.object({
+  "action": zod.enum(['seen', 'accepted', 'dismissed'])
+})
+
+export const RespondToNudgeResponse = zod.unknown()
+
+
+/**
+ * @summary List the fan's standing rules
+ */
+export const ListAssistantRulesResponse = zod.unknown()
+
+
+/**
+ * @summary Create a plain-language standing rule (AI-parsed)
+ */
+export const createAssistantRuleBodyRuleTextMax = 500;
+
+
+
+export const CreateAssistantRuleBody = zod.object({
+  "ruleText": zod.string().max(createAssistantRuleBodyRuleTextMax)
+})
+
+export const CreateAssistantRuleResponse = zod.void()
+
+
+/**
+ * @summary Pause or resume a standing rule
+ */
+export const UpdateAssistantRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAssistantRuleBody = zod.object({
+  "active": zod.boolean()
+})
+
+export const UpdateAssistantRuleResponse = zod.unknown()
+
+
+/**
+ * @summary Delete a standing rule
+ */
+export const DeleteAssistantRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAssistantRuleResponse = zod.unknown()
+
+
+/**
+ * @summary Match rules against offers and list drafted redemptions awaiting consent
+ */
+export const ListDraftedActionsResponse = zod.unknown()
+
+
+/**
+ * @summary Explicitly confirm a drafted redemption (the only path that moves money)
+ */
+export const ConfirmDraftedActionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ConfirmDraftedActionResponse = zod.void()
+
+
+/**
+ * @summary Dismiss a drafted redemption
+ */
+export const DismissDraftedActionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DismissDraftedActionResponse = zod.unknown()
 
 
 /**

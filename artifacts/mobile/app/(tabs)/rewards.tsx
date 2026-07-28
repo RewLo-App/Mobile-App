@@ -118,6 +118,7 @@ export default function RewardsScreen() {
   const insets = useSafeAreaInsets();
   const { rewloPoints, rewardStats, offers, redeemOffer, refreshWallet, transactions, followedClubIds, selectedClubId } = useWallet();
   const [filter, setFilter] = useState<string>("All");
+  const [loyaltyExpanded, setLoyaltyExpanded] = useState(false);
   const [redemptionError, setRedemptionError] = useState<string | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -131,7 +132,7 @@ export default function RewardsScreen() {
   useEffect(() => { void loadCatalog(); }, [refreshWallet]);
 
   const categories = ["All", ...Array.from(new Set(offers.map((offer) => offer.category)))];
-  const filtered = filter === "All" ? offers : offers.filter((o) => o.category === filter);
+  const filtered = (filter === "All" ? offers : offers.filter((o) => o.category === filter)).slice(0, 5);
   const rewardTxs = transactions.filter((t) => t.type === "reward").slice(0, 3);
 
   const currentTierIdx = getCurrentTierIndex(rewloPoints);
@@ -214,13 +215,17 @@ export default function RewardsScreen() {
             </Text>
           </View>
           <View style={[styles.clubLoyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {(followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId]).map((clubId, idx, arr) => {
+            {(() => {
+              const allClubs = followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId];
+              const visible = loyaltyExpanded ? allClubs : allClubs.slice(0, 1);
+              return visible.map((clubId, idx) => {
+                const arr = allClubs;
               const club = getClubById(clubId);
               const ptsShare = arr.length === 1 ? 1 : idx === 0 ? 0.78 : 0.22;
               const clubPts = Math.round(rewloPoints * ptsShare);
               const maxPts = Math.round(rewloPoints * (arr.length === 1 ? 1 : 0.78));
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
-              const isLast = idx === arr.length - 1;
+              const isLast = idx === visible.length - 1;
               const entry = { club, ptsShare };
               return (
                 <View
@@ -263,7 +268,19 @@ export default function RewardsScreen() {
                   </View>
                 </View>
               );
-            })}
+              });
+            })()}
+            {followedClubIds.length > 1 && (
+              <Pressable
+                onPress={() => setLoyaltyExpanded((v) => !v)}
+                style={[styles.loyaltyExpandBtn, { borderTopColor: colors.border }]}
+              >
+                <Text style={[styles.loyaltyExpandText, { color: colors.primary }]}>
+                  {loyaltyExpanded ? "Hide other clubs" : "Show other clubs"}
+                </Text>
+                <Ionicons name={loyaltyExpanded ? "chevron-up" : "chevron-down"} size={16} color={colors.primary} />
+              </Pressable>
+            )}
           </View>
 
           {/* Rewlo Milestones */}
@@ -511,6 +528,8 @@ const styles = StyleSheet.create({
   retryButton: { height: 42, paddingHorizontal: 22, borderRadius: 12, justifyContent: "center" },
   retryText: { color: "#fff", fontFamily: "Inter_700Bold" },
   clubLoyaltyCard: { marginHorizontal: 20, borderRadius: 20, borderWidth: 1, overflow: "hidden", marginBottom: 4 },
+  loyaltyExpandBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  loyaltyExpandText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   clubLoyaltyRow: { flexDirection: "row", alignItems: "center", padding: 16, gap: 16 },
   clubLoyaltyInfo: { flex: 1, gap: 5 },
   clubLoyaltyTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

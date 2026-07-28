@@ -131,6 +131,164 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/CurrentUser" }
         "401": { description: Authentication is required }
+
+  /assistant/chat:
+    post:
+      operationId: assistantChat
+      tags: [assistant]
+      summary: Ask the RewLo assistant a question grounded in real wallet data
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantChatRequest" }
+      responses:
+        "200":
+          description: Assistant reply with optional deep links
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantChatResponse" }
+        "400": { description: Invalid question }
+        "502": { description: Assistant unavailable }
+  /assistant/chat/history:
+    get:
+      operationId: assistantChatHistory
+      tags: [assistant]
+      summary: Get the most recent assistant conversation
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Conversation messages
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantChatHistory" }
+  /assistant/nudges:
+    get:
+      operationId: listAssistantNudges
+      tags: [assistant]
+      summary: Generate and list active in-app nudges
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Active nudges
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AssistantNudgeList" }
+  /assistant/nudges/{id}/respond:
+    post:
+      operationId: respondToNudge
+      tags: [assistant]
+      summary: Mark a nudge seen, accepted, or dismissed
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [action]
+              properties:
+                action: { type: string, enum: [seen, accepted, dismissed] }
+      responses:
+        "200": { description: Nudge updated }
+        "404": { description: Nudge not found }
+  /assistant/rules:
+    get:
+      operationId: listAssistantRules
+      tags: [assistant]
+      summary: List the fan's standing rules
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Standing rules }
+    post:
+      operationId: createAssistantRule
+      tags: [assistant]
+      summary: Create a plain-language standing rule (AI-parsed)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ruleText]
+              properties:
+                ruleText: { type: string, maxLength: 500 }
+      responses:
+        "201": { description: Rule created }
+        "400": { description: Invalid rule text }
+        "409": { description: Too many active rules }
+        "502": { description: Rule parsing unavailable }
+  /assistant/rules/{id}:
+    patch:
+      operationId: updateAssistantRule
+      tags: [assistant]
+      summary: Pause or resume a standing rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [active]
+              properties:
+                active: { type: boolean }
+      responses:
+        "200": { description: Rule updated }
+        "404": { description: Rule not found }
+    delete:
+      operationId: deleteAssistantRule
+      tags: [assistant]
+      summary: Delete a standing rule
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Rule deleted }
+        "404": { description: Rule not found }
+  /assistant/drafted-actions:
+    get:
+      operationId: listDraftedActions
+      tags: [assistant]
+      summary: Match rules against offers and list drafted redemptions awaiting consent
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Proposed drafted actions }
+  /assistant/drafted-actions/{id}/confirm:
+    post:
+      operationId: confirmDraftedAction
+      tags: [assistant]
+      summary: Explicitly confirm a drafted redemption (the only path that moves money)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "201": { description: Redemption completed }
+        "404": { description: Suggestion not found }
+        "409": { description: Insufficient points or wallet not configured }
+        "410": { description: Offer no longer available }
+        "502": { description: Provider failure }
+  /assistant/drafted-actions/{id}/dismiss:
+    post:
+      operationId: dismissDraftedAction
+      tags: [assistant]
+      summary: Dismiss a drafted redemption
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200": { description: Suggestion dismissed }
+        "404": { description: Suggestion not found }
+
   /merchant/overview:
     get:
       operationId: getMerchantOverview
@@ -157,6 +315,7 @@ paths:
         "400": { description: Invalid date range }
         "401": { description: Authentication is required }
         "403": { description: Merchant role and active merchant membership are required }
+
   /healthz:
     get:
       operationId: healthCheck
@@ -177,6 +336,66 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    AssistantChatRequest:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message: { type: string, maxLength: 1000 }
+        conversationId: { type: integer, nullable: true }
+    AssistantLink:
+      type: object
+      required: [label, route]
+      properties:
+        label: { type: string }
+        route: { type: string }
+        offerId: { type: integer }
+    AssistantChatResponse:
+      type: object
+      required: [conversationId, reply, links]
+      properties:
+        conversationId: { type: integer }
+        reply: { type: string }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/AssistantLink" }
+    AssistantChatHistory:
+      type: object
+      required: [conversationId, messages]
+      properties:
+        conversationId: { type: integer, nullable: true }
+        messages:
+          type: array
+          items:
+            type: object
+            required: [id, role, content, links]
+            properties:
+              id: { type: integer }
+              role: { type: string }
+              content: { type: string }
+              links:
+                type: array
+                items: { $ref: "#/components/schemas/AssistantLink" }
+              createdAt: { type: string, format: date-time }
+    AssistantNudge:
+      type: object
+      required: [id, kind, title, body, status]
+      properties:
+        id: { type: integer }
+        kind: { type: string }
+        title: { type: string }
+        body: { type: string }
+        offerId: { type: integer, nullable: true }
+        status: { type: string, enum: [pending, seen] }
+        createdAt: { type: string, format: date-time }
+    AssistantNudgeList:
+      type: object
+      required: [nudges, unseenCount]
+      properties:
+        nudges:
+          type: array
+          items: { $ref: "#/components/schemas/AssistantNudge" }
+        unseenCount: { type: integer }
     ForgotPasswordRequest:
       type: object
       additionalProperties: false

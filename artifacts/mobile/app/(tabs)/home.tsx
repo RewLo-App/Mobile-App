@@ -19,6 +19,53 @@ import { getClubById } from "@/constants/clubs";
 import { getFixtureForClub, getTimeUntilMatch } from "@/constants/fixtures";
 import { Transaction, useWallet } from "@/context/WalletContext";
 import { useColors } from "@/hooks/useColors";
+import { assistantApi, type AssistantNudge } from "@/utils/assistantApi";
+
+const NUDGE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  expiring_offer: "time-outline",
+  category_habit: "repeat-outline",
+  inactivity: "star-outline",
+};
+
+function NudgeCard({
+  nudge,
+  onAccept,
+  onDismiss,
+}: {
+  nudge: AssistantNudge;
+  onAccept: (nudge: AssistantNudge) => void;
+  onDismiss: (nudge: AssistantNudge) => void;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[styles.nudgeCard, { backgroundColor: colors.card, borderColor: `${colors.primary}44` }]}>
+      <View style={styles.nudgeTop}>
+        <View style={[styles.nudgeIcon, { backgroundColor: `${colors.primary}22` }]}>
+          <Ionicons name={NUDGE_ICONS[nudge.kind] ?? "sparkles"} size={16} color={colors.primary} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.nudgeTitle, { color: colors.foreground }]}>{nudge.title}</Text>
+          <Text style={[styles.nudgeBody, { color: colors.mutedForeground }]}>{nudge.body}</Text>
+        </View>
+        <Pressable
+          onPress={() => onDismiss(nudge)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss suggestion"
+        >
+          <Ionicons name="close" size={18} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
+      <Pressable
+        onPress={() => onAccept(nudge)}
+        style={({ pressed }) => [styles.nudgeCta, { backgroundColor: colors.primary, opacity: pressed ? 0.85 : 1 }]}
+      >
+        <Text style={styles.nudgeCtaText}>{nudge.offerId ? "View offer" : "See my rewards"}</Text>
+        <Ionicons name="arrow-forward" size={14} color="#fff" />
+      </Pressable>
+    </View>
+  );
+}
 
 function TransactionRow({ item }: { item: Transaction }) {
   const colors = useColors();
@@ -88,8 +135,52 @@ export default function HomeScreen() {
   } = useWallet();
   const selectedClub = getClubById(selectedClubId);
   const [balanceVisible, setBalanceVisible] = useState(true);
+  const [loyaltyExpanded, setLoyaltyExpanded] = useState(false);
   const [profileLoading, setProfileLoading] = useState(!authenticatedUser);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  const [nudges, setNudges] = useState<AssistantNudge[]>([]);
+  const [unseenNudges, setUnseenNudges] = useState(0);
+
+  const loadNudges = useCallback(async () => {
+    try {
+      const data = await assistantApi.nudges();
+      setNudges(data.nudges);
+      setUnseenNudges(data.unseenCount);
+    } catch {
+      // The home feed stays usable when the assistant is unavailable.
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated) return;
+      void loadNudges();
+    }, [isAuthenticated, loadNudges]),
+  );
+
+  const respondToNudge = useCallback(
+    (nudge: AssistantNudge, action: "accepted" | "dismissed") => {
+      setNudges((prev) => prev.filter((n) => n.id !== nudge.id));
+      setUnseenNudges((prev) => (nudge.status === "pending" ? Math.max(0, prev - 1) : prev));
+      void assistantApi.respondToNudge(nudge.id, action).catch(() => undefined);
+      if (action === "accepted") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push("/(tabs)/rewards");
+      }
+    },
+    [],
+  );
+
+  const markNudgesSeen = useCallback(() => {
+    const pending = nudges.filter((n) => n.status === "pending");
+    if (pending.length === 0) return;
+    setUnseenNudges(0);
+    setNudges((prev) => prev.map((n) => ({ ...n, status: "seen" as const })));
+    for (const n of pending) {
+      void assistantApi.respondToNudge(n.id, "seen").catch(() => undefined);
+    }
+  }, [nudges]);
 
   const fixture = getFixtureForClub(selectedClubId);
   const [matchTime, setMatchTime] = useState(() =>
@@ -182,8 +273,18 @@ export default function HomeScreen() {
               >
                 <ClubBadge club={selectedClub} size={48} />
               </Pressable>
-              <Pressable style={[styles.notifBtn, { backgroundColor: colors.card }]}>
+              <Pressable
+                onPress={markNudgesSeen}
+                style={[styles.notifBtn, { backgroundColor: colors.card }]}
+                accessibilityRole="button"
+                accessibilityLabel={unseenNudges > 0 ? `${unseenNudges} new suggestions` : "Notifications"}
+              >
                 <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+                {unseenNudges > 0 && (
+                  <View style={styles.notifBadge}>
+                    <Text style={styles.notifBadgeText}>{unseenNudges > 9 ? "9+" : unseenNudges}</Text>
+                  </View>
+                )}
               </Pressable>
             </View>
           </View>
@@ -250,6 +351,80 @@ export default function HomeScreen() {
             ))}
           </View>
         </LinearGradient>
+
+        {/* RewLo Pay — Agentic Commerce */}
+        <View style={styles.section}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/merchant-pay" as never); }}
+            accessibilityRole="button"
+            accessibilityLabel="Pay a merchant with RewLo Pay"
+            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+          >
+            <LinearGradient
+              colors={["#0B3B8F", "#1D4ED8", "#00B8A9"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.payCard}
+            >
+              <View style={styles.payCardHeader}>
+                <View style={styles.payCardBadge}>
+                  <Ionicons name="sparkles" size={13} color="#00E5CC" />
+                  <Text style={styles.payCardBadgeText}>AGENTIC CHECKOUT</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.8)" />
+              </View>
+              <Text style={styles.payCardTitle}>Pay with RewLo Pay</Text>
+              <Text style={styles.payCardSub}>
+                Your assistant builds the best split — points first, then cash, and any remainder goes securely to card.
+              </Text>
+              <View style={styles.payCardLegs}>
+                <View style={styles.payLeg}>
+                  <Ionicons name="star" size={14} color="#F59E0B" />
+                  <Text style={styles.payLegLabel}>Points</Text>
+                  <Text style={styles.payLegValue}>
+                    {authenticatedUser
+                      ? `$${(authenticatedUser.rewloPoints / 100).toFixed(2)}`
+                      : "—"}
+                  </Text>
+                </View>
+                <View style={styles.payLegDivider} />
+                <View style={styles.payLeg}>
+                  <Ionicons name="wallet-outline" size={14} color="#00E5CC" />
+                  <Text style={styles.payLegLabel}>Cash</Text>
+                  <Text style={styles.payLegValue}>${balance.toFixed(2)}</Text>
+                </View>
+                <View style={styles.payLegDivider} />
+                <View style={styles.payLeg}>
+                  <Ionicons name="card-outline" size={14} color="#93C5FD" />
+                  <Text style={styles.payLegLabel}>Card</Text>
+                  <Text style={styles.payLegValue}>via Stripe</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </View>
+
+        {/* Assistant Nudges */}
+        {nudges.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>For you</Text>
+              <Pressable onPress={() => router.push("/assistant-rules" as never)}>
+                <Text style={[styles.seeAll, { color: colors.primary }]}>My rules</Text>
+              </Pressable>
+            </View>
+            <View style={{ gap: 10 }}>
+              {nudges.slice(0, 3).map((nudge) => (
+                <NudgeCard
+                  key={nudge.id}
+                  nudge={nudge}
+                  onAccept={(n) => respondToNudge(n, "accepted")}
+                  onDismiss={(n) => respondToNudge(n, "dismissed")}
+                />
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Match Day Banner */}
         {fixture && matchTime && !matchTime.isPast && (
@@ -335,14 +510,18 @@ export default function HomeScreen() {
             </Pressable>
           </View>
           <View style={[styles.loyaltyCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {(followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId]).map((clubId, idx, arr) => {
+            {(() => {
+              const allClubs = followedClubIds.length > 0 ? followedClubIds.slice(0, 2) : [selectedClubId];
+              const visible = loyaltyExpanded ? allClubs : allClubs.slice(0, 1);
+              return visible.map((clubId, idx) => {
+                const arr = allClubs;
               const club = getClubById(clubId);
               const ptsShare = arr.length === 1 ? 1 : idx === 0 ? 0.78 : 0.22;
               const profilePoints = authenticatedUser?.rewloPoints ?? 0;
               const clubPts = Math.round(profilePoints * ptsShare);
               const maxPts = Math.round(profilePoints * (arr.length === 1 ? 1 : 0.78));
               const barPct = maxPts > 0 ? clubPts / maxPts : 0;
-              const isLast = idx === arr.length - 1;
+              const isLast = idx === visible.length - 1;
               const entry = { club, ptsShare };
               return (
                 <View
@@ -376,10 +555,36 @@ export default function HomeScreen() {
                   </View>
                 </View>
               );
-            })}
+              });
+            })()}
+            {(followedClubIds.length > 1) && (
+              <Pressable
+                onPress={() => setLoyaltyExpanded((v) => !v)}
+                style={[styles.loyaltyExpandBtn, { borderTopColor: colors.border }]}
+              >
+                <Text style={[styles.loyaltyExpandText, { color: colors.primary }]}>
+                  {loyaltyExpanded ? "Hide other clubs" : "Show other clubs"}
+                </Text>
+                <Ionicons name={loyaltyExpanded ? "chevron-up" : "chevron-down"} size={16} color={colors.primary} />
+              </Pressable>
+            )}
           </View>
         </View>
       </ScrollView>
+
+      {/* Ask assistant bubble */}
+      <Pressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/assistant-chat" as never); }}
+        style={({ pressed }) => [
+          styles.askBubble,
+          { backgroundColor: colors.primary, bottom: (Platform.OS === "web" ? 90 : insets.bottom + 90), opacity: pressed ? 0.85 : 1 },
+        ]}
+        accessibilityRole="button"
+        accessibilityLabel="Ask the RewLo assistant"
+      >
+        <Ionicons name="sparkles" size={18} color="#fff" />
+        <Text style={styles.askBubbleText}>Ask</Text>
+      </Pressable>
     </View>
   );
 }
@@ -395,6 +600,17 @@ const styles = StyleSheet.create({
   clubBadge: { borderRadius: 24, overflow: "hidden", borderWidth: 2, borderColor: "rgba(0,229,204,0.7)" },
   emptyActivity: { padding: 20, textAlign: "center", fontSize: 13, fontFamily: "Inter_400Regular" },
   notifBtn: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  notifBadge: { position: "absolute", top: -2, right: -2, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 3 },
+  notifBadgeText: { color: "#fff", fontSize: 9, fontFamily: "Inter_700Bold" },
+  nudgeCard: { borderRadius: 18, borderWidth: 1.5, padding: 14, gap: 12 },
+  nudgeTop: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  nudgeIcon: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  nudgeTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  nudgeBody: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 17, marginTop: 2 },
+  nudgeCta: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: 12, paddingVertical: 10 },
+  nudgeCtaText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  askBubble: { position: "absolute", left: 20, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 26, paddingHorizontal: 18, paddingVertical: 13, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  askBubbleText: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   balanceCard: {
     borderRadius: 22,
     padding: 22,
@@ -425,6 +641,17 @@ const styles = StyleSheet.create({
   txDesc: { fontSize: 14, fontFamily: "Inter_500Medium" },
   txMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
   txAmount: { fontSize: 14, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
+  payCard: { borderRadius: 20, padding: 18, gap: 8 },
+  payCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  payCardBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.25)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
+  payCardBadgeText: { color: "#00E5CC", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  payCardTitle: { color: "#fff", fontSize: 19, fontFamily: "Inter_700Bold" },
+  payCardSub: { color: "rgba(255,255,255,0.78)", fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  payCardLegs: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 14, paddingVertical: 12, marginTop: 6 },
+  payLeg: { flex: 1, alignItems: "center", gap: 3 },
+  payLegDivider: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.25)" },
+  payLegLabel: { color: "rgba(255,255,255,0.6)", fontSize: 10, fontFamily: "Inter_500Medium", textTransform: "uppercase" as const, letterSpacing: 0.6 },
+  payLegValue: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   matchdayBanner: { borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center" },
   matchdayLeft: { flex: 1, gap: 5 },
   matchdayRight: { paddingLeft: 12 },
@@ -439,6 +666,8 @@ const styles = StyleSheet.create({
   todayPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.25)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   upcomingPill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.15)", alignSelf: "flex-start", paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 },
   loyaltyCard: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
+  loyaltyExpandBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth },
+  loyaltyExpandText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   loyaltyRow: { flexDirection: "row", alignItems: "center", padding: 14, gap: 14 },
   loyaltyInfo: { flex: 1, gap: 5 },
   loyaltyTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

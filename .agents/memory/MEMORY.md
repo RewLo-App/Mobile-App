@@ -1,1 +1,3 @@
 - [API base path v1](api-base-path.md) — backend mounts all routes at /api/v1; generated client and any hand-written fetches must use /api/v1 or requests 404.
+- [Drizzle push constraint names](drizzle-push-constraint-names.md) — TTY-prompt failures on db push mean constraint-name mismatch; rename constraints in SQL, never truncate.
+- [Stripe connector quirks](stripe-connector-quirks.md) — connection API returns creds as `secret`/`publishable` (not `secret_key`); runMigrations takes only `{databaseUrl}`; card checkout auto-refunds on stale wallet split.
