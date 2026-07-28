@@ -9,3 +9,6 @@ export * from "./relations";
 export * from "./conversations";
 export * from "./messages";
 export * from "./assistant";
+export * from "./merchant-loyalty";
+export * from "./merchant-users";
+export * from "./merchant-loyalty-issuance";

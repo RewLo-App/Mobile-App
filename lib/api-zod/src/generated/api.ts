@@ -141,6 +141,7 @@ export const GetCurrentUserResponse = zod.object({
 
 
 /**
+
  * @summary Ask the RewLo assistant a question grounded in real wallet data
  */
 export const assistantChatBodyMessageMax = 1000;
@@ -160,10 +161,56 @@ export const AssistantChatResponse = zod.object({
   "route": zod.string(),
   "offerId": zod.number().optional()
 }))
+
+ * Returns only the merchant resolved from the bearer token's active membership. Raw loyalty-ledger entries are not exposed.
+ * @summary Get the authenticated merchant's aggregate overview
+ */
+export const getMerchantOverviewQueryRangeDefault = `30d`;
+
+export const GetMerchantOverviewQueryParams = zod.object({
+  "range": zod.enum(['7d', '30d', '90d', 'custom']).default(getMerchantOverviewQueryRangeDefault),
+  "from": zod.date().optional(),
+  "to": zod.date().optional()
+})
+
+export const GetMerchantOverviewResponse = zod.object({
+  "merchant": zod.object({
+  "code": zod.string(),
+  "name": zod.string()
+}),
+  "range": zod.object({
+  "key": zod.string().optional(),
+  "from": zod.coerce.date().optional(),
+  "to": zod.coerce.date().optional()
+}),
+  "metrics": zod.object({
+  "rwloIssued": zod.number().optional(),
+  "rwloRedeemed": zod.number().optional(),
+  "rwloInCirculation": zod.number().optional(),
+  "netFloatCents": zod.number().optional(),
+  "netFloatLabel": zod.string().optional(),
+  "netFloatBasis": zod.string().optional()
+}),
+  "transfers": zod.object({
+  "inPoints": zod.number().optional(),
+  "outPoints": zod.number().optional(),
+  "pendingCount": zod.number().optional(),
+  "pendingPoints": zod.number().optional()
+}),
+  "settlements": zod.object({
+
+}).passthrough(),
+  "alerts": zod.array(zod.object({
+
+}).passthrough()),
+  "timeSeries": zod.array(zod.object({
+
+}).passthrough())
 })
 
 
 /**
+
  * @summary Get the most recent assistant conversation
  */
 export const AssistantChatHistoryResponse = zod.object({

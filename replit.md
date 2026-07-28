@@ -43,3 +43,13 @@ _Populate as you build — sharp edges, "always run X before Y" rules._
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+
+## Merchant dashboard
+
+`artifacts/merchant-dashboard` is a separate React/Vite application for merchant users; it is not part of the Expo fan app.
+
+1. Start the API: `pnpm --filter @workspace/api-server run dev`.
+2. In another terminal, start the dashboard: `pnpm --filter @workspace/merchant-dashboard run dev`.
+3. Open `http://localhost:5174`.
+
+The foundation calls the existing `/api/v1/auth/me` endpoint and permits only a `Merchant`-role JWT. Until a merchant sign-in flow is implemented, use browser DevTools to set a valid access token as `localStorage.rewlo_access_token`. If the API is hosted elsewhere, set `VITE_API_BASE_URL` to its `/api/v1` URL before starting Vite.

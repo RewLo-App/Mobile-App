@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { db } from "./index";
 import {
   merchantsTable,
@@ -10,6 +10,13 @@ import {
   offerCategoriesTable,
   offersTable,
   offerRedemptionsTable,
+  merchantAlertsTable,
+  merchantLoyaltyLedgerEntriesTable,
+  merchantLoyaltyTransfersTable,
+  merchantSettlementsTable,
+  merchantCampaignIssuancesTable,
+  merchantLoyaltyCampaignsTable,
+  merchantLoyaltyRulesTable,
 } from "./schema";
 
 const demoUsers = [
@@ -70,6 +77,8 @@ const transactionTypes = [
 ] as const;
 type TransactionType = (typeof transactionTypes)[number];
 
+const daysBefore = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
 async function seed() {
   await db.transaction(async (tx) => {
     await tx.insert(rolesTable).values([{ name: "Fan" }, { name: "Merchant" }]).onConflictDoNothing();
@@ -120,6 +129,86 @@ async function seed() {
       }),
     );
 
+    // Merchant dashboard development fixtures are additive and idempotent.
+    // In particular, LIV001's existing Brale provisioning and cash/payment
+    // history are never modified; this only adds merchant-loyalty records.
+    const liv = merchantRows.find((merchant) => merchant.merchantCode === "LIV001");
+    const manc = merchantRows.find((merchant) => merchant.merchantCode === "MANC001");
+    if (!liv || !manc) throw new Error("Merchant dashboard fixtures require LIV001 and MANC001");
+    await tx.insert(appSettingsTable).values({
+      key: "rwlo_point_value_preview",
+      value: JSON.stringify({ version: 1, label: "RWLO programme points", unit: "RWLO", pointsPerUnit: 1, disclaimer: "Programme value display only; not cash, yield, or an investment return." }),
+    }).onConflictDoNothing();
+
+    const [livCampaign] = await tx.insert(merchantLoyaltyCampaignsTable).values({
+      merchantId: liv.id, name: "Matchday Founding Rewards", description: "Development fixture for LIV001 merchant reporting.", status: "active", startsAt: daysBefore(30), endsAt: daysBefore(-30), pointsBudget: 15_000, pointsIssued: 12_500, eligibility: { audience: "matchday_fans" },
+    }).onConflictDoUpdate({ target: [merchantLoyaltyCampaignsTable.merchantId, merchantLoyaltyCampaignsTable.name], set: { pointsBudget: 15_000, pointsIssued: 12_500, status: "active" } }).returning();
+    const [mancCampaign] = await tx.insert(merchantLoyaltyCampaignsTable).values({
+      merchantId: manc.id, name: "Store Opening Bonus", description: "Development fixture for MANC001 merchant reporting.", status: "paused", startsAt: daysBefore(14), endsAt: daysBefore(-14), pointsBudget: 7_000, pointsIssued: 4_200, eligibility: { audience: "club_supporters" },
+    }).onConflictDoUpdate({ target: [merchantLoyaltyCampaignsTable.merchantId, merchantLoyaltyCampaignsTable.name], set: { pointsBudget: 7_000, pointsIssued: 4_200, status: "paused" } }).returning();
+    if (!livCampaign || !mancCampaign) throw new Error("Campaign fixtures were not created");
+    await tx.insert(merchantLoyaltyRulesTable).values([
+      { merchantId: liv.id, ruleKey: "LIV-SPEND", version: 1, name: "Matchday spend", ruleType: "per_dollar", status: "active", priority: 100, pointsNumerator: 2, spendDenominatorCents: 100, conditions: { channel: "in_store" } },
+      { merchantId: liv.id, ruleKey: "LIV-VISIT", version: 1, name: "Stadium visit", ruleType: "per_visit", status: "draft", priority: 50, pointsPerVisit: 100 },
+      { merchantId: liv.id, ruleKey: "LIV-CAMPAIGN", version: 1, name: "Founding rewards campaign", ruleType: "campaign", status: "active", priority: 200, campaignId: livCampaign.id },
+      { merchantId: manc.id, ruleKey: "MANC-SPEND", version: 1, name: "Store spend", ruleType: "per_dollar", status: "paused", priority: 100, pointsNumerator: 1, spendDenominatorCents: 100 },
+    ]).onConflictDoNothing();
+
+    await tx.insert(merchantLoyaltyTransfersTable).values([
+      {
+        sourceMerchantId: liv.id, destinationMerchantId: manc.id, points: 900,
+        status: "completed", idempotencyKey: "DEMO-MERCHANT-TRANSFER-LIV-MANC-001",
+        externalReference: "DEMO-XFER-LIV-MANC-001", metadata: { demo: true, seedVersion: 1 },
+        initiatedAt: daysBefore(18), completedAt: daysBefore(18),
+      },
+      {
+        sourceMerchantId: manc.id, destinationMerchantId: liv.id, points: 650,
+        status: "pending", idempotencyKey: "DEMO-MERCHANT-TRANSFER-MANC-LIV-002",
+        externalReference: "DEMO-XFER-MANC-LIV-002", metadata: { demo: true, seedVersion: 1 }, initiatedAt: daysBefore(1),
+      },
+    ]).onConflictDoNothing();
+
+    const [completedTransfer] = await tx.select({ id: merchantLoyaltyTransfersTable.id })
+      .from(merchantLoyaltyTransfersTable)
+      .where(eq(merchantLoyaltyTransfersTable.idempotencyKey, "DEMO-MERCHANT-TRANSFER-LIV-MANC-001"));
+    if (!completedTransfer) throw new Error("Completed merchant transfer fixture was not created");
+
+    await tx.insert(merchantLoyaltyLedgerEntriesTable).values([
+      { merchantId: liv.id, fanUserId: userRows[0]?.id, entryType: "issuance", status: "posted", pointsDelta: 10_000, reserveDeltaCents: 1_000, sourceType: "seed_campaign", sourceId: "LIV-SEASON-OPENING", idempotencyKey: "DEMO-LEDGER-LIV-001", externalReference: "DEMO-LIV-ISSUE-001", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(28) },
+      { merchantId: liv.id, fanUserId: userRows[1]?.id, entryType: "redemption", status: "posted", pointsDelta: -2_400, reserveDeltaCents: -240, sourceType: "seed_redemption", sourceId: "LIV-ANFIELD-OFFER", idempotencyKey: "DEMO-LEDGER-LIV-002", externalReference: "DEMO-LIV-REDEEM-001", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(21) },
+      { merchantId: liv.id, entryType: "transfer_out", status: "posted", pointsDelta: -900, reserveDeltaCents: 0, sourceType: "merchant_transfer", sourceId: String(completedTransfer.id), idempotencyKey: "DEMO-LEDGER-LIV-003", externalReference: "DEMO-LIV-XFER-OUT-001", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(18) },
+      { merchantId: liv.id, fanUserId: userRows[2]?.id, entryType: "issuance", status: "posted", pointsDelta: 2_500, reserveDeltaCents: 250, sourceType: "seed_campaign", sourceId: "LIV-MATCHDAY-BOOST", idempotencyKey: "DEMO-LEDGER-LIV-004", externalReference: "DEMO-LIV-ISSUE-002", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(4) },
+      { merchantId: liv.id, fanUserId: userRows[3]?.id, entryType: "redemption", status: "posted", pointsDelta: -350, reserveDeltaCents: -35, sourceType: "seed_redemption", sourceId: "LIV-MERCH-OFFER", idempotencyKey: "DEMO-LEDGER-LIV-005", externalReference: "DEMO-LIV-REDEEM-002", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(2) },
+      { merchantId: manc.id, entryType: "transfer_in", status: "posted", pointsDelta: 900, reserveDeltaCents: 0, sourceType: "merchant_transfer", sourceId: String(completedTransfer.id), idempotencyKey: "DEMO-LEDGER-MANC-001", externalReference: "DEMO-MANC-XFER-IN-001", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(18) },
+      { merchantId: manc.id, fanUserId: userRows[4]?.id, entryType: "issuance", status: "posted", pointsDelta: 4_200, reserveDeltaCents: 420, sourceType: "seed_campaign", sourceId: "MANC-STORE-OPENING", idempotencyKey: "DEMO-LEDGER-MANC-002", externalReference: "DEMO-MANC-ISSUE-001", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(12) },
+      { merchantId: manc.id, fanUserId: userRows[5]?.id, entryType: "redemption", status: "posted", pointsDelta: -950, reserveDeltaCents: -95, sourceType: "seed_redemption", sourceId: "MANC-KIT-OFFER", idempotencyKey: "DEMO-LEDGER-MANC-003", externalReference: "DEMO-MANC-REDEEM-001", metadata: { demo: true, seedVersion: 1 }, occurredAt: daysBefore(6) },
+    ]).onConflictDoNothing();
+
+    const issuanceLedgerEntries = await tx.execute(sql`
+      SELECT id, external_reference FROM merchant_loyalty_ledger_entries
+      WHERE external_reference IN ('DEMO-LIV-ISSUE-001', 'DEMO-LIV-ISSUE-002', 'DEMO-MANC-ISSUE-001')
+    `);
+    const ledgerId = (reference: string) => Number(issuanceLedgerEntries.rows.find((row) => row.external_reference === reference)?.id ?? 0);
+    await tx.insert(merchantCampaignIssuancesTable).values([
+      { merchantId: liv.id, campaignId: livCampaign.id, fanUserId: userRows[0]!.id, ledgerEntryId: ledgerId("DEMO-LIV-ISSUE-001"), issuedPoints: 10_000, status: "posted", sourceEventKey: "LIV-OPENING-USER-1", idempotencyKey: "DEMO-CAMPAIGN-ISSUANCE-LIV-001", metadata: { demo: true } },
+      { merchantId: liv.id, campaignId: livCampaign.id, fanUserId: userRows[2]!.id, ledgerEntryId: ledgerId("DEMO-LIV-ISSUE-002"), issuedPoints: 2_500, status: "posted", sourceEventKey: "LIV-OPENING-USER-3", idempotencyKey: "DEMO-CAMPAIGN-ISSUANCE-LIV-002", metadata: { demo: true } },
+      { merchantId: manc.id, campaignId: mancCampaign.id, fanUserId: userRows[4]!.id, ledgerEntryId: ledgerId("DEMO-MANC-ISSUE-001"), issuedPoints: 4_200, status: "posted", sourceEventKey: "MANC-OPENING-USER-5", idempotencyKey: "DEMO-CAMPAIGN-ISSUANCE-MANC-001", metadata: { demo: true } },
+    ]).onConflictDoNothing();
+
+    await tx.insert(merchantSettlementsTable).values([
+      { merchantId: liv.id, periodStart: daysBefore(31), periodEnd: daysBefore(15), status: "settled", issuedPoints: 10_000, redeemedPoints: 2_400, transferInPoints: 0, transferOutPoints: 900, reserveContributionCents: 1_000, reserveReleaseCents: 240, netFloatCents: 760, externalReference: "DEMO-SETTLEMENT-LIV-001", settledAt: daysBefore(14) },
+      { merchantId: liv.id, periodStart: daysBefore(14), periodEnd: daysBefore(1), status: "pending", issuedPoints: 2_500, redeemedPoints: 350, transferInPoints: 0, transferOutPoints: 0, reserveContributionCents: 250, reserveReleaseCents: 35, netFloatCents: 215, externalReference: "DEMO-SETTLEMENT-LIV-002" },
+      { merchantId: manc.id, periodStart: daysBefore(20), periodEnd: daysBefore(5), status: "processing", issuedPoints: 4_200, redeemedPoints: 950, transferInPoints: 900, transferOutPoints: 0, reserveContributionCents: 420, reserveReleaseCents: 95, netFloatCents: 325, externalReference: "DEMO-SETTLEMENT-MANC-001" },
+      { merchantId: manc.id, periodStart: daysBefore(40), periodEnd: daysBefore(21), status: "failed", externalReference: "DEMO-SETTLEMENT-MANC-000", failureReason: "Demo provider reconciliation delay" },
+    ]).onConflictDoNothing();
+
+    await tx.insert(merchantAlertsTable).values([
+      { merchantId: liv.id, severity: "warning", category: "transfer", title: "Incoming transfer pending", message: "650 RWLO from Manchester City Official Store is awaiting network confirmation.", actionPath: "/app/transfers", state: "open", createdAt: daysBefore(1) },
+      { merchantId: liv.id, severity: "info", category: "settlement", title: "Settlement prepared", message: "Your current settlement period is ready for processing.", actionPath: "/app/settlements", state: "read", createdAt: daysBefore(2) },
+      { merchantId: manc.id, severity: "critical", category: "settlement", title: "Settlement needs attention", message: "A previous demo settlement requires reconciliation before it can be closed.", actionPath: "/app/settlements", state: "open", createdAt: daysBefore(4) },
+      { merchantId: manc.id, severity: "info", category: "system", title: "Ledger migration complete", message: "Merchant loyalty reporting is available for this development fixture.", state: "resolved", createdAt: daysBefore(10), resolvedAt: daysBefore(9) },
+    ]).onConflictDoNothing();
+
     const userIds = userRows.map((user) => user.id);
     await tx.delete(userCardsTable).where(inArray(userCardsTable.userId, userIds));
     await tx.insert(userCardsTable).values(
@@ -159,7 +248,7 @@ async function seed() {
     ).onConflictDoNothing();
   });
 
-  console.log("Seeded 2 roles, 20 fan users, 10 merchants, 20 debit cards, and demo wallet transactions.");
+  console.log("Seeded 2 roles, 20 fan users, 10 merchants, wallet transactions, and additive merchant-ledger fixtures for LIV001 and MANC001.");
 }
 
 seed().catch((error: unknown) => {

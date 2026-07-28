@@ -28,8 +28,10 @@ import type {
   CurrentUser,
   ForgotPasswordRequest,
   GenericMessage,
+  GetMerchantOverviewParams,
   HealthStatus,
   LoginRequest,
+  MerchantOverview,
   RefreshRequest,
   RegisterRequest,
   RegisterResponse,
@@ -564,11 +566,8 @@ export function useGetCurrentUser<TData = Awaited<ReturnType<typeof getCurrentUs
 
 
 
+
 export const getAssistantChatUrl = () => {
-
-
-
-
   return `/api/v1/assistant/chat`
 }
 
@@ -648,6 +647,25 @@ export const getAssistantChatHistoryUrl = () => {
 export const assistantChatHistory = async ( options?: RequestInit): Promise<AssistantChatHistory> => {
 
   return customFetch<AssistantChatHistory>(getAssistantChatHistoryUrl(),
+export const getGetMerchantOverviewUrl = (params?: GetMerchantOverviewParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/merchant/overview?${stringifiedParams}` : `/api/v1/merchant/overview`
+}
+}
+
+export const getMerchantOverview = async (params?: GetMerchantOverviewParams, options?: RequestInit): Promise<MerchantOverview> => {
+
+  return customFetch<MerchantOverview>(getGetMerchantOverviewUrl(params),
   {
     ...options,
     method: 'GET'
@@ -660,23 +678,41 @@ export const assistantChatHistory = async ( options?: RequestInit): Promise<Assi
 
 
 
+
 export const getAssistantChatHistoryQueryKey = () => {
     return [
     `/api/v1/assistant/chat/history`
+
+export const getGetMerchantOverviewQueryKey = (params?: GetMerchantOverviewParams,) => {
+    return [
+    `/api/v1/merchant/overview`, ...(params ? [params] : [])
     ] as const;
     }
 
 
+
 export const getAssistantChatHistoryQueryOptions = <TData = Awaited<ReturnType<typeof assistantChatHistory>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof assistantChatHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+export const getGetMerchantOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getMerchantOverview>>, TError = ErrorType<void>>(params?: GetMerchantOverviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMerchantOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
+
 
   const queryKey =  queryOptions?.queryKey ?? getAssistantChatHistoryQueryKey();
 
 
 
     const queryFn: QueryFunction<Awaited<ReturnType<typeof assistantChatHistory>>> = ({ signal }) => assistantChatHistory({ signal, ...requestOptions });
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMerchantOverviewQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMerchantOverview>>> = ({ signal }) => getMerchantOverview(params, { signal, ...requestOptions });
+
+
 
 
 
@@ -700,10 +736,30 @@ export function useAssistantChatHistory<TData = Awaited<ReturnType<typeof assist
 
   const queryOptions = getAssistantChatHistoryQueryOptions(options)
 
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMerchantOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMerchantOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getMerchantOverview>>>
+export type GetMerchantOverviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the authenticated merchant's aggregate overview
+ */
+
+export function useGetMerchantOverview<TData = Awaited<ReturnType<typeof getMerchantOverview>>, TError = ErrorType<void>>(
+ params?: GetMerchantOverviewParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMerchantOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMerchantOverviewQueryOptions(params,options)
+
+
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
 
 
 

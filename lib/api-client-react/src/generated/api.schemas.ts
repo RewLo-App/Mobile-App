@@ -36,12 +36,12 @@ export interface AssistantChatHistory {
   messages: AssistantChatHistoryMessagesItem[];
 }
 
-export type AssistantNudgeStatus = typeof AssistantNudgeStatus[keyof typeof AssistantNudgeStatus];
-
+export type AssistantNudgeStatus =
+  (typeof AssistantNudgeStatus)[keyof typeof AssistantNudgeStatus];
 
 export const AssistantNudgeStatus = {
-  pending: 'pending',
-  seen: 'seen',
+  pending: "pending",
+  seen: "seen",
 } as const;
 
 export interface AssistantNudge {
@@ -124,11 +124,11 @@ export interface RegisterRequest {
   zipCode: string;
 }
 
-export type AuthenticatedUserWalletProvisioningStatus = typeof AuthenticatedUserWalletProvisioningStatus[keyof typeof AuthenticatedUserWalletProvisioningStatus];
-
+export type AuthenticatedUserWalletProvisioningStatus =
+  (typeof AuthenticatedUserWalletProvisioningStatus)[keyof typeof AuthenticatedUserWalletProvisioningStatus];
 
 export const AuthenticatedUserWalletProvisioningStatus = {
-  completed: 'completed',
+  completed: "completed",
 } as const;
 
 export interface AuthenticatedUser {
@@ -146,17 +146,60 @@ export interface RegisterResponse {
   tokens: TokenPair;
 }
 
+export type MerchantOverviewMerchant = {
+  code: string;
+  name: string;
+};
+
+export type MerchantOverviewRange = {
+  key?: string;
+  from?: string;
+  to?: string;
+};
+
+export type MerchantOverviewMetrics = {
+  rwloIssued?: number;
+  rwloRedeemed?: number;
+  rwloInCirculation?: number;
+  netFloatCents?: number;
+  netFloatLabel?: string;
+  netFloatBasis?: string;
+};
+
+export type MerchantOverviewTransfers = {
+  inPoints?: number;
+  outPoints?: number;
+  pendingCount?: number;
+  pendingPoints?: number;
+};
+
+export type MerchantOverviewSettlements = { [key: string]: unknown };
+
+export type MerchantOverviewAlertsItem = { [key: string]: unknown };
+
+export type MerchantOverviewTimeSeriesItem = { [key: string]: unknown };
+
+export interface MerchantOverview {
+  merchant: MerchantOverviewMerchant;
+  range: MerchantOverviewRange;
+  metrics: MerchantOverviewMetrics;
+  transfers: MerchantOverviewTransfers;
+  settlements: MerchantOverviewSettlements;
+  alerts: MerchantOverviewAlertsItem[];
+  timeSeries: MerchantOverviewTimeSeriesItem[];
+}
+
 export interface HealthStatus {
   status: string;
 }
 
-export type RespondToNudgeBodyAction = typeof RespondToNudgeBodyAction[keyof typeof RespondToNudgeBodyAction];
-
+export type RespondToNudgeBodyAction =
+  (typeof RespondToNudgeBodyAction)[keyof typeof RespondToNudgeBodyAction];
 
 export const RespondToNudgeBodyAction = {
-  seen: 'seen',
-  accepted: 'accepted',
-  dismissed: 'dismissed',
+  seen: "seen",
+  accepted: "accepted",
+  dismissed: "dismissed",
 } as const;
 
 export type RespondToNudgeBody = {
@@ -172,3 +215,18 @@ export type UpdateAssistantRuleBody = {
   active: boolean;
 };
 
+export type GetMerchantOverviewParams = {
+  range?: GetMerchantOverviewRange;
+  from?: string;
+  to?: string;
+};
+
+export type GetMerchantOverviewRange =
+  (typeof GetMerchantOverviewRange)[keyof typeof GetMerchantOverviewRange];
+
+export const GetMerchantOverviewRange = {
+  "7d": "7d",
+  "30d": "30d",
+  "90d": "90d",
+  custom: "custom",
+} as const;
