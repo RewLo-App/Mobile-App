@@ -99,6 +99,13 @@
       "when": 1784754822024,
       "tag": "0013_merchant_loyalty_issuance",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784754822025,
+      "tag": "0014_merchant_code_format",
+      "breakpoints": true
     }
   ]
 }

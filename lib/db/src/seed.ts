@@ -43,7 +43,7 @@ const demoUsers = [
 ] as const;
 
 const demoMerchants = [
-  ["MANC001", "Manchester City Official Store", "store@manc001.demo.rewlo.io", "Official match-day merchandise and supporter gear."],
+  ["MAN001", "Manchester City Official Store", "store@manc001.demo.rewlo.io", "Official match-day merchandise and supporter gear."],
   ["ARS001", "Arsenal Fan Shop", "store@ars001.demo.rewlo.io", "Licensed Arsenal apparel and match-day essentials."],
   ["CHE001", "Chelsea Stadium Catering", "ops@che001.demo.rewlo.io", "Food, drinks, and hospitality at Stamford Bridge."],
   ["LIV001", "Liverpool FC Retail", "store@liv001.demo.rewlo.io", "Official Liverpool FC retail partner."],
@@ -133,8 +133,8 @@ async function seed() {
     // In particular, LIV001's existing Brale provisioning and cash/payment
     // history are never modified; this only adds merchant-loyalty records.
     const liv = merchantRows.find((merchant) => merchant.merchantCode === "LIV001");
-    const manc = merchantRows.find((merchant) => merchant.merchantCode === "MANC001");
-    if (!liv || !manc) throw new Error("Merchant dashboard fixtures require LIV001 and MANC001");
+    const manc = merchantRows.find((merchant) => merchant.merchantCode === "MAN001");
+    if (!liv || !manc) throw new Error("Merchant dashboard fixtures require LIV001 and MAN001");
     await tx.insert(appSettingsTable).values({
       key: "rwlo_point_value_preview",
       value: JSON.stringify({ version: 1, label: "RWLO programme points", unit: "RWLO", pointsPerUnit: 1, disclaimer: "Programme value display only; not cash, yield, or an investment return." }),
@@ -144,7 +144,7 @@ async function seed() {
       merchantId: liv.id, name: "Matchday Founding Rewards", description: "Development fixture for LIV001 merchant reporting.", status: "active", startsAt: daysBefore(30), endsAt: daysBefore(-30), pointsBudget: 15_000, pointsIssued: 12_500, eligibility: { audience: "matchday_fans" },
     }).onConflictDoUpdate({ target: [merchantLoyaltyCampaignsTable.merchantId, merchantLoyaltyCampaignsTable.name], set: { pointsBudget: 15_000, pointsIssued: 12_500, status: "active" } }).returning();
     const [mancCampaign] = await tx.insert(merchantLoyaltyCampaignsTable).values({
-      merchantId: manc.id, name: "Store Opening Bonus", description: "Development fixture for MANC001 merchant reporting.", status: "paused", startsAt: daysBefore(14), endsAt: daysBefore(-14), pointsBudget: 7_000, pointsIssued: 4_200, eligibility: { audience: "club_supporters" },
+      merchantId: manc.id, name: "Store Opening Bonus", description: "Development fixture for MAN001 merchant reporting.", status: "paused", startsAt: daysBefore(14), endsAt: daysBefore(-14), pointsBudget: 7_000, pointsIssued: 4_200, eligibility: { audience: "club_supporters" },
     }).onConflictDoUpdate({ target: [merchantLoyaltyCampaignsTable.merchantId, merchantLoyaltyCampaignsTable.name], set: { pointsBudget: 7_000, pointsIssued: 4_200, status: "paused" } }).returning();
     if (!livCampaign || !mancCampaign) throw new Error("Campaign fixtures were not created");
     await tx.insert(merchantLoyaltyRulesTable).values([
@@ -248,7 +248,7 @@ async function seed() {
     ).onConflictDoNothing();
   });
 
-  console.log("Seeded 2 roles, 20 fan users, 10 merchants, wallet transactions, and additive merchant-ledger fixtures for LIV001 and MANC001.");
+  console.log("Seeded 2 roles, 20 fan users, 10 merchants, wallet transactions, and additive merchant-ledger fixtures for LIV001 and MAN001.");
 }
 
 seed().catch((error: unknown) => {

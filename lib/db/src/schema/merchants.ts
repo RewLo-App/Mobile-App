@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { check, index, integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { walletProvisioningStatusEnum } from "./users";
 
 export const merchantsTable = pgTable(
@@ -35,6 +35,7 @@ export const merchantsTable = pgTable(
       .$onUpdate(() => new Date()),
   },
   (table) => [
+    check("merchants_code_format", sql`${table.merchantCode} ~ '^[A-Z0-9]{6}$'`),
     index("merchants_wallet_provisioning_status_idx").on(table.walletProvisioningStatus),
     index("merchants_blockchain_network_idx").on(table.blockchainNetwork),
     uniqueIndex("merchants_wallet_provisioning_key_unique")

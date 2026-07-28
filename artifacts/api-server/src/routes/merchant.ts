@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { db, merchantAlertsTable, merchantLoyaltyTransfersTable, merchantSettlementsTable } from "@workspace/db";
+import { db, merchantAlertsTable, merchantLoyaltyTransfersTable, merchantSettlementsTable, usersTable, walletTransactionsTable } from "@workspace/db";
 import { requireAuth, requireRole } from "../middleware/auth";
 import { requireMerchantMembership, type MerchantAuthenticatedRequest } from "../middleware/merchant-identity";
 import { parseOverviewRange } from "./merchant-overview-model";
@@ -54,5 +54,77 @@ router.get("/merchant/overview", async (req: MerchantAuthenticatedRequest, res) 
       timeSeries: series.rows.map((row) => ({ date: new Date(String(row.date)).toISOString(), issuedPoints: number(row.issued_points), redeemedPoints: number(row.redeemed_points), transferInPoints: number(row.transfer_in_points), transferOutPoints: number(row.transfer_out_points) })),
     });
   } catch (error) { req.log.error({ error, merchantId: merchant.merchantId }, "Merchant overview query failed"); res.status(500).json({ error: "Merchant overview could not be loaded." }); }
+});
+
+router.get("/merchant/transfers", async (req: MerchantAuthenticatedRequest, res) => {
+  const merchant = req.merchant!;
+  const page = Math.max(1, Number.parseInt(String(req.query.page ?? "1"), 10) || 1);
+  const pageSize = Math.min(100, Math.max(10, Number.parseInt(String(req.query.pageSize ?? "25"), 10) || 25));
+  const offset = (page - 1) * pageSize;
+  try {
+    const [rows, summaryResult] = await Promise.all([
+      db.select({
+        id: walletTransactionsTable.id,
+        status: walletTransactionsTable.status,
+        amountCents: walletTransactionsTable.amountCents,
+        currency: walletTransactionsTable.currency,
+        reference: walletTransactionsTable.reference,
+        externalTransactionId: walletTransactionsTable.externalTransactionId,
+        blockchainHash: walletTransactionsTable.blockchainHash,
+        description: walletTransactionsTable.description,
+        createdAt: walletTransactionsTable.createdAt,
+        payerFirstName: usersTable.firstName,
+        payerLastName: usersTable.lastName,
+        payerEmail: usersTable.email,
+      }).from(walletTransactionsTable)
+        .innerJoin(usersTable, eq(walletTransactionsTable.userId, usersTable.id))
+        .where(and(
+          eq(walletTransactionsTable.merchantId, merchant.merchantId),
+          eq(walletTransactionsTable.type, "merchant_payment"),
+        ))
+        .orderBy(desc(walletTransactionsTable.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+      db.execute(sql`
+        SELECT COUNT(*) AS total_count,
+          COUNT(*) FILTER (WHERE status = 'completed') AS completed_count,
+          COALESCE(SUM(-amount_cents) FILTER (WHERE status = 'completed'), 0) AS received_cents,
+          COUNT(*) FILTER (WHERE status = 'pending') AS pending_count,
+          COALESCE(SUM(-amount_cents) FILTER (WHERE status = 'pending'), 0) AS pending_cents
+        FROM wallet_transactions
+        WHERE merchant_id = ${merchant.merchantId} AND type = 'merchant_payment'
+      `),
+    ]);
+    const summary = summaryResult.rows[0] ?? {};
+    const total = number(summary.total_count);
+    res.json({
+      merchant: { code: merchant.merchantCode, name: merchant.merchantName },
+      summary: {
+        total,
+        completedCount: number(summary.completed_count),
+        receivedCents: number(summary.received_cents),
+        pendingCount: number(summary.pending_count),
+        pendingCents: number(summary.pending_cents),
+      },
+      transfers: rows.map((row) => ({
+        ...row,
+        // Wallet transactions are fan-centric debits. Merchant receipts are
+        // presented as positive incoming amounts.
+        amountCents: Math.abs(row.amountCents),
+        payerName: `${row.payerFirstName} ${row.payerLastName}`.trim(),
+        createdAt: row.createdAt.toISOString(),
+      })),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+        hasMore: page * pageSize < total,
+      },
+    });
+  } catch (error) {
+    req.log.error({ error, merchantId: merchant.merchantId }, "Merchant transfers query failed");
+    res.status(500).json({ error: "Merchant transfers could not be loaded." });
+  }
 });
 export default router;

@@ -114,7 +114,7 @@ export default function MerchantPay() {
                   value={code}
                   onChangeText={setCode}
                   autoCapitalize="characters"
-                  placeholder="e.g. MANC001"
+                  placeholder="e.g. MAN001"
                   placeholderTextColor={c.mutedForeground}
                   style={[
                     s.input,

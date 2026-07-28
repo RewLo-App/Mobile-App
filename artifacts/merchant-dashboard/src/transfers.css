@@ -1,0 +1,88 @@
+.transfers-table-panel {
+  min-height: 0;
+  margin-top: 16px;
+  padding: 27px 29px;
+}
+
+.transfers-table-wrap {
+  overflow-x: auto;
+  margin-top: 19px;
+}
+
+.transfers-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 840px;
+  text-align: left;
+}
+
+.transfers-table th {
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(153, 183, 206, 0.16);
+  color: #748b9e;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
+}
+
+.transfers-table td {
+  padding: 17px 14px;
+  border-bottom: 1px solid rgba(153, 183, 206, 0.1);
+  color: #b7c7d2;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.transfers-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.transfers-table tbody tr:hover {
+  background: rgba(114, 159, 185, 0.04);
+}
+
+.transfers-table td strong,
+.transfers-table td span:not(.status-chip) {
+  display: block;
+}
+
+.transfers-table td strong {
+  margin-bottom: 5px;
+  color: #edf5fa;
+  font-size: 13px;
+}
+
+.transfers-table td span:not(.status-chip) {
+  margin-top: 5px;
+  color: #72899b;
+  font-size: 10px;
+}
+
+.transfers-table code {
+  color: #afd2e6;
+  font-size: 11px;
+}
+
+.transfers-table time {
+  color: #93a8b8;
+  white-space: nowrap;
+}
+
+.transfers-table .received-amount {
+  color: #4ee095;
+  font-size: 14px;
+  font-weight: 850;
+  text-align: right;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .transfers-table-panel {
+    padding: 20px 12px;
+  }
+
+  .transfers-table-panel > .panel-heading {
+    padding-inline: 8px;
+  }
+}
