@@ -132,7 +132,7 @@ export default function RewardsScreen() {
   useEffect(() => { void loadCatalog(); }, [refreshWallet]);
 
   const categories = ["All", ...Array.from(new Set(offers.map((offer) => offer.category)))];
-  const filtered = filter === "All" ? offers : offers.filter((o) => o.category === filter);
+  const filtered = (filter === "All" ? offers : offers.filter((o) => o.category === filter)).slice(0, 5);
   const rewardTxs = transactions.filter((t) => t.type === "reward").slice(0, 3);
 
   const currentTierIdx = getCurrentTierIndex(rewloPoints);
