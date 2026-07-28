@@ -352,6 +352,58 @@ export default function HomeScreen() {
           </View>
         </LinearGradient>
 
+        {/* RewLo Pay — Agentic Commerce */}
+        <View style={styles.section}>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/merchant-pay" as never); }}
+            accessibilityRole="button"
+            accessibilityLabel="Pay a merchant with RewLo Pay"
+            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1 }]}
+          >
+            <LinearGradient
+              colors={["#0B3B8F", "#1D4ED8", "#00B8A9"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.payCard}
+            >
+              <View style={styles.payCardHeader}>
+                <View style={styles.payCardBadge}>
+                  <Ionicons name="sparkles" size={13} color="#00E5CC" />
+                  <Text style={styles.payCardBadgeText}>AGENTIC CHECKOUT</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.8)" />
+              </View>
+              <Text style={styles.payCardTitle}>Pay with RewLo Pay</Text>
+              <Text style={styles.payCardSub}>
+                Your assistant builds the best split — points first, then cash, and any remainder goes securely to card.
+              </Text>
+              <View style={styles.payCardLegs}>
+                <View style={styles.payLeg}>
+                  <Ionicons name="star" size={14} color="#F59E0B" />
+                  <Text style={styles.payLegLabel}>Points</Text>
+                  <Text style={styles.payLegValue}>
+                    {authenticatedUser
+                      ? `$${(authenticatedUser.rewloPoints / 100).toFixed(2)}`
+                      : "—"}
+                  </Text>
+                </View>
+                <View style={styles.payLegDivider} />
+                <View style={styles.payLeg}>
+                  <Ionicons name="wallet-outline" size={14} color="#00E5CC" />
+                  <Text style={styles.payLegLabel}>Cash</Text>
+                  <Text style={styles.payLegValue}>${balance.toFixed(2)}</Text>
+                </View>
+                <View style={styles.payLegDivider} />
+                <View style={styles.payLeg}>
+                  <Ionicons name="card-outline" size={14} color="#93C5FD" />
+                  <Text style={styles.payLegLabel}>Card</Text>
+                  <Text style={styles.payLegValue}>via Stripe</Text>
+                </View>
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </View>
+
         {/* Assistant Nudges */}
         {nudges.length > 0 && (
           <View style={styles.section}>
@@ -589,6 +641,17 @@ const styles = StyleSheet.create({
   txDesc: { fontSize: 14, fontFamily: "Inter_500Medium" },
   txMeta: { fontSize: 12, fontFamily: "Inter_400Regular" },
   txAmount: { fontSize: 14, fontWeight: "600" as const, fontFamily: "Inter_600SemiBold" },
+  payCard: { borderRadius: 20, padding: 18, gap: 8 },
+  payCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  payCardBadge: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.25)", paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
+  payCardBadgeText: { color: "#00E5CC", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1 },
+  payCardTitle: { color: "#fff", fontSize: 19, fontFamily: "Inter_700Bold" },
+  payCardSub: { color: "rgba(255,255,255,0.78)", fontSize: 12.5, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  payCardLegs: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.22)", borderRadius: 14, paddingVertical: 12, marginTop: 6 },
+  payLeg: { flex: 1, alignItems: "center", gap: 3 },
+  payLegDivider: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "rgba(255,255,255,0.25)" },
+  payLegLabel: { color: "rgba(255,255,255,0.6)", fontSize: 10, fontFamily: "Inter_500Medium", textTransform: "uppercase" as const, letterSpacing: 0.6 },
+  payLegValue: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   matchdayBanner: { borderRadius: 20, padding: 18, flexDirection: "row", alignItems: "center" },
   matchdayLeft: { flex: 1, gap: 5 },
   matchdayRight: { paddingLeft: 12 },
