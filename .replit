@@ -3,6 +3,8 @@ modules = ["nodejs-24", "python-3.11", "postgresql-16"]
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
+build = ["sh", "-c", "pnpm run build:merchant-deployment"]
+run = ["sh", "-c", "pnpm run start:merchant-deployment"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]

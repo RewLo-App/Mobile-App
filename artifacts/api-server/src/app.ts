@@ -1,6 +1,8 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import v1Router from "./routes/v1";
 import { openApiDocument, swaggerUiHtml } from "./docs/openapi";
 import { logger } from "./lib/logger";
@@ -73,5 +75,29 @@ app.get("/api/stripe/return", (req, res) => {
 app.get("/api-docs.json", (req, res) => res.json(openApiDocument(req)));
 app.get("/api-docs", (_req, res) => res.type("html").send(swaggerUiHtml));
 app.use("/api/v1", v1Router);
+
+// A production deployment exposes the merchant dashboard and API on one
+// origin. API and documentation paths are resolved above; static assets and
+// client-side dashboard routes are resolved from the Vite build below.
+const merchantDashboardDist = path.resolve(
+  __dirname,
+  "../../merchant-dashboard/dist",
+);
+
+if (existsSync(merchantDashboardDist)) {
+  app.use(express.static(merchantDashboardDist, { index: false }));
+  app.use((req, res, next) => {
+    if (
+      req.method !== "GET"
+      || req.path.startsWith("/api/")
+      || req.path === "/api-docs"
+      || !req.accepts("html")
+    ) {
+      next();
+      return;
+    }
+    res.sendFile(path.join(merchantDashboardDist, "index.html"));
+  });
+}
 
 export default app;
