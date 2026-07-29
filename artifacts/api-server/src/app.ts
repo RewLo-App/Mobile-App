@@ -3,14 +3,11 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import v1Router from "./routes/v1";
 import { openApiDocument, swaggerUiHtml } from "./docs/openapi";
 import { logger } from "./lib/logger";
-import { registerMobileDeployment } from "./mobile-deployment";
 import { WebhookHandlers } from "./webhookHandlers";
 
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const app: Express = express();
 
 app.use(
@@ -46,9 +43,7 @@ app.post(
     try {
       const sig = Array.isArray(signature) ? signature[0]! : signature;
       if (!Buffer.isBuffer(req.body)) {
-        logger.error(
-          "Stripe webhook body is not a Buffer — check middleware order",
-        );
+        logger.error("Stripe webhook body is not a Buffer — check middleware order");
         res.status(500).json({ error: "Webhook processing error" });
         return;
       }
@@ -79,74 +74,30 @@ app.get("/api/stripe/return", (req, res) => {
 
 app.get("/api-docs.json", (req, res) => res.json(openApiDocument(req)));
 app.get("/api-docs", (_req, res) => res.type("html").send(swaggerUiHtml));
-app.get("/api/health", (_req, res) => {
-  res.json({
-    status: "ok",
-    service: "api-server",
-  });
-});
 app.use("/api/v1", v1Router);
-app.use("/api", (req, res) => {
-  res.status(404).json({
-    error: "API route not found",
-    path: req.originalUrl.split("?")[0],
-  });
-});
 
 // A production deployment exposes the merchant dashboard and API on one
 // origin. API and documentation paths are resolved above; static assets and
 // client-side dashboard routes are resolved from the Vite build below.
-const merchantDashboardCandidates = [
-  path.resolve(process.cwd(), "artifacts/merchant-dashboard/dist"),
-  path.resolve(process.cwd(), "../merchant-dashboard/dist"),
-  path.resolve(moduleDir, "../../merchant-dashboard/dist"),
-];
-const merchantCandidateWithIndex = merchantDashboardCandidates.find(
-  (candidate) => existsSync(path.join(candidate, "index.html")),
-);
-const merchantDashboardDist =
-  merchantCandidateWithIndex ??
-  merchantDashboardCandidates.find((candidate) => existsSync(candidate)) ??
-  merchantDashboardCandidates[0]!;
-const merchantIndex = path.join(merchantDashboardDist, "index.html");
-const merchantIndexExists = existsSync(merchantIndex);
-
-logger.info(
-  {
-    merchantBuildPath: merchantDashboardDist,
-    merchantIndexPath: merchantIndex,
-    merchantIndexExists,
-  },
-  "Merchant deployment diagnostics",
+const merchantDashboardDist = path.resolve(
+  __dirname,
+  "../../merchant-dashboard/dist",
 );
 
-if (merchantIndexExists) {
-  app.get("/merchant", (_req, res) => {
-    res.sendFile(merchantIndex);
-  });
-  app.use(
-    "/merchant",
-    express.static(merchantDashboardDist, { index: false, redirect: false }),
-  );
-  app.use("/merchant", (req, res, next) => {
+if (existsSync(merchantDashboardDist)) {
+  app.use(express.static(merchantDashboardDist, { index: false }));
+  app.use((req, res, next) => {
     if (
-      req.method !== "GET" ||
-      path.extname(req.path) ||
-      !req.accepts("html")
+      req.method !== "GET"
+      || req.path.startsWith("/api/")
+      || req.path === "/api-docs"
+      || !req.accepts("html")
     ) {
       next();
       return;
     }
-    res.sendFile(merchantIndex);
+    res.sendFile(path.join(merchantDashboardDist, "index.html"));
   });
-} else {
-  logger.warn(
-    { checkedPaths: merchantDashboardCandidates },
-    "Merchant dashboard build not found; /merchant routes will be unavailable",
-  );
 }
-
-// Mobile owns the root deployment only after all API and merchant routes.
-registerMobileDeployment(app);
 
 export default app;

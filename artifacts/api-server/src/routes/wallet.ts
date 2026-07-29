@@ -7,7 +7,7 @@ import { requireAuth, requireRole, type AuthenticatedRequest } from "../middlewa
 import { authenticatedUserId } from "../middleware/identity";
 
 const router = Router();
-router.use("/wallet", requireAuth, requireRole("Fan"));
+router.use(requireAuth, requireRole("Fan"));
 const parseUserId = (value: unknown) => {
   const id = Number(value);
   return Number.isSafeInteger(id) && id > 0 ? id : null;

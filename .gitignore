@@ -51,5 +51,3 @@ Thumbs.db
 .cache/
 .local/
 .env.example
-!artifacts/merchant-dashboard/.env.example
-!artifacts/mobile/.env.example
