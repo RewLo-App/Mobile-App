@@ -19,7 +19,7 @@ import { generateNudges, runStandingRules } from "../services/assistant-engine";
 import { redeemOfferForUser } from "../services/redemption-service";
 
 const router = Router();
-router.use(requireAuth, requireRole("Fan"));
+router.use("/assistant", requireAuth, requireRole("Fan"));
 
 // ---------- Chat (Mode B: conversational query) ----------
 

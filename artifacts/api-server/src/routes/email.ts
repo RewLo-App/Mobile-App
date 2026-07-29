@@ -4,7 +4,7 @@ import { logger } from "../lib/logger";
 import { requireAuth } from "../middleware/auth";
 
 const router = Router();
-router.use(requireAuth);
+router.use("/send-welcome-email", requireAuth);
 
 function buildEmailHtml(name: string, teamName: string, gradStart: string, gradEnd: string) {
   return `<!DOCTYPE html>

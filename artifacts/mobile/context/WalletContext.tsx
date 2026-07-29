@@ -4,6 +4,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { DEFAULT_CLUB_ID, getClubById } from "@/constants/clubs";
 import {
   configureAuthClient,
+  FanAccountRequiredError,
   forgotPassword as requestPasswordReset,
   loginWithPassword,
   logoutSession,
@@ -267,7 +268,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       return true;
     } catch (error) {
       const status = typeof error === "object" && error !== null && "status" in error ? (error as { status?: unknown }).status : null;
-      setAuthError(status === 401 ? "Invalid email or password." : "Unable to sign in. Please check your connection and try again.");
+      setAuthError(
+        error instanceof FanAccountRequiredError
+          ? error.message
+          : status === 401
+            ? "Invalid email or password."
+            : "Unable to sign in. Please check your connection and try again.",
+      );
       return false;
     } finally {
       setIsLoading(false);

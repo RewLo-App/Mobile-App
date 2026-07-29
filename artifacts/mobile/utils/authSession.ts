@@ -17,10 +17,28 @@ import type { CurrentUser, RegisterRequest } from "@workspace/api-client-react";
 
 const ACCESS_TOKEN_KEY = "rewlo_access_token";
 const REFRESH_TOKEN_KEY = "rewlo_refresh_token";
+
+export class FanAccountRequiredError extends Error {
+  readonly name = "FanAccountRequiredError";
+
+  constructor() {
+    super("This account is registered for the Merchant dashboard. Sign in with a Fan account.");
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+function apiOrigin(value: string | undefined): string | null {
+  const normalized = value?.trim().replace(/\/+$/, "");
+  if (!normalized) return null;
+  // Generated client paths already begin with /api/v1. Accept an accidentally
+  // versioned environment value without producing /api/v1/api/v1.
+  return normalized.replace(/\/api\/v1$/i, "");
+}
+
 // Production builds receive this from the EAS "production" environment. Do
 // not add a localhost fallback here: a released iOS app cannot reach it.
-const API_BASE = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "")
-  ?? (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : null);
+const API_BASE = apiOrigin(process.env.EXPO_PUBLIC_API_URL)
+  ?? apiOrigin(process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : undefined);
 
 if (process.env.EXPO_PUBLIC_APP_ENV === "production" && (!API_BASE || !API_BASE.startsWith("https://"))) {
   throw new Error("A secure EXPO_PUBLIC_API_URL is required for production builds.");
@@ -109,7 +127,14 @@ export async function refreshAuthSession(): Promise<boolean> {
 
 export async function loadCurrentUser(): Promise<CurrentUser> {
   configureAuthClient();
-  return getCurrentUser();
+  const currentUser = await getCurrentUser();
+  if (currentUser.role !== "Fan") {
+    // A shared authentication endpoint serves both products. Never retain a
+    // valid Merchant session inside the Fan mobile application.
+    await logoutSession();
+    throw new FanAccountRequiredError();
+  }
+  return currentUser;
 }
 
 export async function loginWithPassword(email: string, password: string): Promise<CurrentUser> {
