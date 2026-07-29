@@ -24,17 +24,22 @@ const SCREEN_W = Dimensions.get("window").width;
 const SCAN_SIZE = SCREEN_W * 0.72;
 
 const DEMO_QR_PAYLOADS = [
-  { merchant: "Etihad Stadium Catering", amount: 12.5, ref: "STQR-4821" },
-  { merchant: "MCFC Official Store", amount: 38.0, ref: "SHQR-7743" },
+  { merchant: "Chelsea Stadium Catering", amount: 12.5, ref: "STQR-4821", merchantCode: "CHE001" },
+  { merchant: "Manchester City Official Store", amount: 38.0, ref: "SHQR-7743", merchantCode: "MAN001" },
   { merchant: "Jordan Thompson", amount: 25.0, ref: "P2P-2291", isP2P: true },
-  { merchant: "Nike Stadium Pop-Up", amount: 64.99, ref: "NKQR-0056" },
+  { merchant: "Arsenal Fan Shop", amount: 64.99, ref: "NKQR-0056", merchantCode: "ARS001" },
 ];
+
+// Merchant QR codes encode the merchant code, optionally with an amount:
+// "MAN001" or "MAN001:38.00".
+const MERCHANT_QR_PATTERN = /^([A-Z]{3,6}\d{3})(?::(\d+(?:\.\d{1,2})?))?$/;
 
 interface PaymentPayload {
   merchant: string;
   amount: number;
   ref: string;
   isP2P?: boolean;
+  merchantCode?: string;
 }
 
 type ScanPhase = "scanning" | "confirming" | "success";
@@ -54,12 +59,30 @@ export default function ScanScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  // Merchant payments go through RewLo Pay so the assistant proposes the best
+  // points + cash (+ card) combination instead of a flat cash deduction.
+  const openAgenticCheckout = (merchantCode: string, amount?: number) => {
+    router.replace({
+      pathname: "/merchant-pay",
+      params: { code: merchantCode, ...(amount ? { amount: amount.toFixed(2) } : {}) },
+    } as never);
+  };
+
   const handleBarCodeScanned = ({ data }: { data: string }) => {
     if (scanned.current) return;
     scanned.current = true;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+    const match = MERCHANT_QR_PATTERN.exec(data.trim().toUpperCase());
+    if (match) {
+      openAgenticCheckout(match[1], match[2] ? parseFloat(match[2]) : undefined);
+      return;
+    }
     const randomPayload = DEMO_QR_PAYLOADS[Math.floor(Math.random() * DEMO_QR_PAYLOADS.length)];
+    if (randomPayload.merchantCode) {
+      openAgenticCheckout(randomPayload.merchantCode, randomPayload.amount);
+      return;
+    }
     setPayload(randomPayload);
     setPhase("confirming");
   };
@@ -100,9 +123,9 @@ export default function ScanScreen() {
     const amount = parseFloat(manualAmount);
     if (!amount || isNaN(amount)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPayload({ merchant: "Manual Entry", amount, ref: "MANUAL-" + Date.now().toString().slice(-6) });
-    setPhase("confirming");
-    setShowManual(false);
+    // Manual amounts also go through the agentic checkout — the fan picks the
+    // merchant there and the assistant builds the best split.
+    router.replace({ pathname: "/merchant-pay", params: { amount: amount.toFixed(2) } } as never);
   };
 
   if (phase === "success" && payload) {
@@ -245,12 +268,7 @@ export default function ScanScreen() {
             keyboardType="decimal-pad"
           />
           <Pressable
-            onPress={() => {
-              const amount = parseFloat(manualAmount);
-              if (!amount || isNaN(amount)) return;
-              setPayload({ merchant: "Manual Entry", amount, ref: "MANUAL-" + Date.now().toString().slice(-6) });
-              setPhase("confirming");
-            }}
+            onPress={handleManualPay}
             style={[styles.webBtn, { backgroundColor: colors.primary }]}
           >
             <Text style={styles.webBtnText}>Continue</Text>
@@ -258,6 +276,10 @@ export default function ScanScreen() {
           <Pressable
             onPress={() => {
               const p = DEMO_QR_PAYLOADS[Math.floor(Math.random() * DEMO_QR_PAYLOADS.length)];
+              if (p.merchantCode) {
+                openAgenticCheckout(p.merchantCode, p.amount);
+                return;
+              }
               setPayload(p);
               setPhase("confirming");
             }}

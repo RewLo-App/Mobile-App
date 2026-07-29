@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ApiErrorDialog } from "@/components/ApiErrorDialog";
@@ -36,6 +36,42 @@ export default function MerchantPay() {
     [error, setError] = useState<string | null>(null);
   const dollars = Number(amount),
     valid = dollars > 0;
+  // Scanned QR codes hand off here so every merchant payment goes through the
+  // agentic best-combination plan: auto-lookup the merchant and, if the QR
+  // carried an amount, request the smart split immediately.
+  const params = useLocalSearchParams<{ code?: string; amount?: string }>();
+  const handledParams = useRef(false);
+  useEffect(() => {
+    if (handledParams.current) return;
+    const scannedCode = typeof params.code === "string" ? params.code.trim().toUpperCase() : "";
+    const scannedAmount = typeof params.amount === "string" ? Number(params.amount) : NaN;
+    if (!scannedCode && !(scannedAmount > 0)) return;
+    handledParams.current = true;
+    if (scannedAmount > 0) setAmount(scannedAmount.toFixed(2));
+    if (!scannedCode) return;
+    setCode(scannedCode);
+    (async () => {
+      try {
+        const m = await walletRequest<Merchant>(`/api/merchants/${encodeURIComponent(scannedCode)}`);
+        setMerchant(m);
+        if (scannedAmount > 0) {
+          setPlanLoading(true);
+          try {
+            setPlan(
+              await walletRequest<PayPlan>("/api/wallet/pay-plan", {
+                method: "POST",
+                body: JSON.stringify({ merchantCode: m.code, amount: scannedAmount.toFixed(2) }),
+              }),
+            );
+          } finally {
+            setPlanLoading(false);
+          }
+        }
+      } catch (e) {
+        setError(apiErrorMessage(e, "Couldn't load the scanned merchant"));
+      }
+    })();
+  }, [params.code, params.amount]);
   async function lookup() {
     setError("");
     try {
@@ -166,7 +202,9 @@ export default function MerchantPay() {
                 {paidPoints.toLocaleString()} points applied
               </Text>
             )}
-            <Button label="Done" onPress={() => router.back()} />
+            {/* Replace, not back: scan handoffs can leave an older RewLo Pay
+                screen underneath this one on the stack. */}
+            <Button label="Done" onPress={() => router.replace("/(tabs)/home")} />
           </View>
         ) : (
           <>
