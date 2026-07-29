@@ -14,22 +14,16 @@ import {
   setBaseUrl,
 } from "@workspace/api-client-react";
 import type { CurrentUser, RegisterRequest } from "@workspace/api-client-react";
+import { API_BASE_URL, getApiOrigin } from "@/utils/apiConfig";
 
 const ACCESS_TOKEN_KEY = "rewlo_access_token";
 const REFRESH_TOKEN_KEY = "rewlo_refresh_token";
-// Production builds receive this from the EAS "production" environment. Do
-// not add a localhost fallback here: a released iOS app cannot reach it.
-const API_BASE = process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "")
-  ?? (process.env.EXPO_PUBLIC_DOMAIN ? `https://${process.env.EXPO_PUBLIC_DOMAIN}` : null);
-
-if (process.env.EXPO_PUBLIC_APP_ENV === "production" && (!API_BASE || !API_BASE.startsWith("https://"))) {
-  throw new Error("A secure EXPO_PUBLIC_API_URL is required for production builds.");
-}
 
 // expo-secure-store is native-only in this setup. On web, use the browser's
 // storage so registration and session restoration can still make API calls.
 async function getSessionValue(key: string): Promise<string | null> {
-  if (Platform.OS === "web") return globalThis.localStorage?.getItem(key) ?? null;
+  if (Platform.OS === "web")
+    return globalThis.localStorage?.getItem(key) ?? null;
   return SecureStore.getItemAsync(key);
 }
 
@@ -53,20 +47,27 @@ let configured = false;
 let refreshInFlight: Promise<boolean> | null = null;
 let sessionExpiredHandler: (() => void | Promise<void>) | null = null;
 
-export function setSessionExpiredHandler(handler: (() => void | Promise<void>) | null) {
+export function setSessionExpiredHandler(
+  handler: (() => void | Promise<void>) | null,
+) {
   sessionExpiredHandler = handler;
 }
 
 /** Configure the generated API client to use the app API and secure bearer token. */
 export function configureAuthClient() {
   if (configured) return;
-  setBaseUrl(API_BASE);
+  // Generated endpoints already start with /api/v1, so configure their
+  // transport with the origin derived from the one normalized API base URL.
+  setBaseUrl(getApiOrigin(API_BASE_URL));
   setAuthTokenGetter(() => getSessionValue(ACCESS_TOKEN_KEY));
   setAuthRefreshHandler(refreshAuthSession);
   configured = true;
 }
 
-export async function saveAuthTokens(accessToken: string, refreshToken: string) {
+export async function saveAuthTokens(
+  accessToken: string,
+  refreshToken: string,
+) {
   await Promise.all([
     setSessionValue(ACCESS_TOKEN_KEY, accessToken),
     setSessionValue(REFRESH_TOKEN_KEY, refreshToken),
@@ -94,7 +95,10 @@ export async function refreshAuthSession(): Promise<boolean> {
       const refreshToken = await getSessionValue(REFRESH_TOKEN_KEY);
       if (!refreshToken) return false;
       const response = await apiRefreshSession({ refreshToken });
-      await saveAuthTokens(response.tokens.accessToken, response.tokens.refreshToken);
+      await saveAuthTokens(
+        response.tokens.accessToken,
+        response.tokens.refreshToken,
+      );
       return true;
     } catch {
       await clearAuthTokens();
@@ -112,17 +116,28 @@ export async function loadCurrentUser(): Promise<CurrentUser> {
   return getCurrentUser();
 }
 
-export async function loginWithPassword(email: string, password: string): Promise<CurrentUser> {
+export async function loginWithPassword(
+  email: string,
+  password: string,
+): Promise<CurrentUser> {
   configureAuthClient();
   const response = await apiLogin({ email: email.trim(), password });
-  await saveAuthTokens(response.tokens.accessToken, response.tokens.refreshToken);
+  await saveAuthTokens(
+    response.tokens.accessToken,
+    response.tokens.refreshToken,
+  );
   return loadCurrentUser();
 }
 
-export async function registerAccount(request: RegisterRequest): Promise<CurrentUser> {
+export async function registerAccount(
+  request: RegisterRequest,
+): Promise<CurrentUser> {
   configureAuthClient();
   const response = await apiRegister(request);
-  await saveAuthTokens(response.tokens.accessToken, response.tokens.refreshToken);
+  await saveAuthTokens(
+    response.tokens.accessToken,
+    response.tokens.refreshToken,
+  );
   return loadCurrentUser();
 }
 
@@ -137,7 +152,7 @@ export async function restoreAuthSession(): Promise<CurrentUser | null> {
     // Keep a valid local session during a transient network failure. Only an
     // unauthorized response is eligible for refresh or credential clearing.
     if (getStatus(error) !== 401) throw error;
-    if (!await refreshAuthSession()) return null;
+    if (!(await refreshAuthSession())) return null;
     try {
       return await loadCurrentUser();
     } catch {
@@ -161,12 +176,17 @@ export async function logoutSession() {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 3_000);
       try {
-        await apiLogout({ refreshToken }, {
-          signal: controller.signal,
-          // The API requires the current access token to revoke this refresh
-          // token. Preserve it only in memory for this one request.
-          headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined,
-        });
+        await apiLogout(
+          { refreshToken },
+          {
+            signal: controller.signal,
+            // The API requires the current access token to revoke this refresh
+            // token. Preserve it only in memory for this one request.
+            headers: accessToken
+              ? { Authorization: `Bearer ${accessToken}` }
+              : undefined,
+          },
+        );
       } finally {
         clearTimeout(timeout);
       }

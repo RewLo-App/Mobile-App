@@ -16,7 +16,9 @@ function findWorkspaceRoot(startDir) {
     }
     dir = path.dirname(dir);
   }
-  throw new Error("Could not find workspace root (no pnpm-workspace.yaml found)");
+  throw new Error(
+    "Could not find workspace root (no pnpm-workspace.yaml found)",
+  );
 }
 
 const workspaceRoot = findWorkspaceRoot(projectRoot);
@@ -146,16 +148,10 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
     console.log(`Setting EXPO_PUBLIC_REPL_ID=${expoPublicReplId}`);
   }
 
+  const expoCliPath = require.resolve("@expo/cli/build/bin/cli");
   metroProcess = spawn(
-    "pnpm",
-    [
-      "exec",
-      "expo",
-      "start",
-      "--no-dev",
-      "--minify",
-      "--localhost",
-    ],
+    process.execPath,
+    [expoCliPath, "start", "--no-dev", "--minify", "--localhost"],
     {
       stdio: ["ignore", "pipe", "pipe"],
       detached: false,
@@ -193,15 +189,21 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
 
 async function downloadFile(url, outputPath) {
   const controller = new AbortController();
-  const fiveMinMS = 5 * 60 * 1_000;
-  const timeoutId = setTimeout(() => controller.abort(), fiveMinMS);
+  const bundleDownloadTimeoutMS = 10 * 60 * 1_000;
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    bundleDownloadTimeoutMS,
+  );
 
   try {
     console.log(`Downloading: ${url}`);
     const response = await fetch(url, { signal: controller.signal });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const details = (await response.text()).trim();
+      throw new Error(
+        `HTTP ${response.status}${details ? `: ${details.slice(0, 2_000)}` : ""}`,
+      );
     }
 
     const file = fs.createWriteStream(outputPath);
@@ -219,7 +221,7 @@ async function downloadFile(url, outputPath) {
     }
 
     if (error.name === "AbortError") {
-      throw new Error(`Download timeout after 5m: ${url}`);
+      throw new Error(`Download timeout after 10m: ${url}`);
     }
     throw error;
   } finally {
@@ -228,7 +230,12 @@ async function downloadFile(url, outputPath) {
 }
 
 async function downloadBundle(platform, timestamp) {
-  const entryPath = path.resolve(projectRoot, "node_modules", "expo-router", "entry");
+  const entryPath = path.resolve(
+    projectRoot,
+    "node_modules",
+    "expo-router",
+    "entry",
+  );
   const bundlePath = path.relative(workspaceRoot, entryPath);
   const url = new URL(`http://localhost:8081/${bundlePath}.bundle`);
   url.searchParams.set("platform", platform);
@@ -264,7 +271,10 @@ async function downloadManifest(platform) {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const details = (await response.text()).trim();
+      throw new Error(
+        `HTTP ${response.status}${details ? `: ${details.slice(0, 2_000)}` : ""}`,
+      );
     }
 
     const manifest = await response.json();
@@ -308,11 +318,27 @@ function extractAssets(timestamp) {
   const staticBuild = path.join(projectRoot, "static-build");
   const bundles = {
     ios: fs.readFileSync(
-      path.join(staticBuild, timestamp, "_expo", "static", "js", "ios", "bundle.js"),
+      path.join(
+        staticBuild,
+        timestamp,
+        "_expo",
+        "static",
+        "js",
+        "ios",
+        "bundle.js",
+      ),
       "utf-8",
     ),
     android: fs.readFileSync(
-      path.join(staticBuild, timestamp, "_expo", "static", "js", "android", "bundle.js"),
+      path.join(
+        staticBuild,
+        timestamp,
+        "_expo",
+        "static",
+        "js",
+        "android",
+        "bundle.js",
+      ),
       "utf-8",
     ),
   };
@@ -520,14 +546,14 @@ async function main() {
 
   await startMetro(domain, expoPublicReplId);
 
-  const downloadTimeout = 600000;
+  const downloadTimeout = 20 * 60 * 1_000;
   const downloadPromise = downloadBundlesAndManifests(timestamp);
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {
       reject(
         new Error(
           `Overall download timeout after ${downloadTimeout / 1000} seconds. ` +
-          "Metro may be struggling to generate bundles. Check Metro logs above.",
+            "Metro may be struggling to generate bundles. Check Metro logs above.",
         ),
       );
     }, downloadTimeout);

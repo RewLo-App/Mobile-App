@@ -19,7 +19,9 @@ import { redeemOfferForUser } from "../services/redemption-service";
 import { authenticatedUserId } from "../middleware/identity";
 
 const router = Router();
-router.use(requireAuth, requireRole("Fan"));
+for (const routePrefix of ["/wallet", "/rewards", "/merchants"]) {
+  router.use(routePrefix, requireAuth, requireRole("Fan"));
+}
 const money = (value: unknown) => {
   const text = typeof value === "string" ? value : String(value ?? "");
   return /^\d+(\.\d{1,2})?$/.test(text) && Number(text) > 0
