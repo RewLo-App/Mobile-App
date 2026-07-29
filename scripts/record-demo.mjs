@@ -28,6 +28,9 @@ if (!apiUrl) {
   process.exit(1);
 }
 const prodOrigin = new URL(apiUrl).origin;
+// Registered FIRST so the API rewrite below (registered later) wins for the
+// API origin; Playwright matches routes in reverse registration order.
+await context.route(/https:\/\/[^/]*\.replit\.app\//, (route) => route.abort());
 await context.route(`${prodOrigin}/**`, async (route) => {
   const req = route.request();
   const target = req.url().replace(prodOrigin, "http://localhost:80");
@@ -38,8 +41,6 @@ await context.route(`${prodOrigin}/**`, async (route) => {
   });
   await route.fulfill({ response: resp });
 });
-// Safety net: block any other request to a production .replit.app host.
-await context.route(/https:\/\/[^/]*\.replit\.app\//, (route) => route.abort());
 
 try {
   await page.goto(BASE, { waitUntil: "networkidle", timeout: 120000 });

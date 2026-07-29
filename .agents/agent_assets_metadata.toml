@@ -107,3 +107,9 @@ id = "b5DghAof4oLZxjtx4UMwP"
 uri = "file://attached_assets/demo/rewlo-signin-topup.mp4"
 type = "video"
 title = "RewLo demo — sign in & top up"
+
+[[outputs]]
+id = "ecTPIIhGc_U1IiFc2D_-o"
+uri = "file://attached_assets/demo/rewlo-full-demo.mp4"
+type = "video"
+title = "RewLo full demo — signup, top-up, rewards & agentic checkout"
