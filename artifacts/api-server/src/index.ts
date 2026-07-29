@@ -5,6 +5,7 @@ import { getStripeSync } from "./stripeClient";
 import { logger } from "./lib/logger";
 import { validateAuthTokenEnvironment } from "./services/auth-token-service";
 import BraleService from "./services/brale-service";
+import { startAssistantScheduler } from "./services/assistant-scheduler";
 
 BraleService.validateEnvironment();
 validateAuthTokenEnvironment();
@@ -59,4 +60,6 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  startAssistantScheduler();
 });
