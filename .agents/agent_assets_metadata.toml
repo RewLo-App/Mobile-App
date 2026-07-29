@@ -101,3 +101,9 @@ id = "Si-XGr8zUn1JheRmbGTnd"
 uri = "file://RewLo_Technical_Documentation.pdf"
 type = "pdf"
 title = "RewLo — Technical Documentation"
+
+[[outputs]]
+id = "b5DghAof4oLZxjtx4UMwP"
+uri = "file://attached_assets/demo/rewlo-signin-topup.mp4"
+type = "video"
+title = "RewLo demo — sign in & top up"

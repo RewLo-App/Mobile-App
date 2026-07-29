@@ -6,7 +6,9 @@ import { requireMerchantMembership, type MerchantAuthenticatedRequest } from "..
 import { parseOverviewRange } from "./merchant-overview-model";
 
 const router = Router();
-router.use(requireAuth, requireRole("Merchant"), requireMerchantMembership);
+// Scoped to /merchant — an unscoped use() would run for every request passing
+// through this router and 403 all Fan traffic mounted after it.
+router.use("/merchant", requireAuth, requireRole("Merchant"), requireMerchantMembership);
 const number = (value: unknown) => Number(value ?? 0);
 
 router.get("/merchant/overview", async (req: MerchantAuthenticatedRequest, res) => {

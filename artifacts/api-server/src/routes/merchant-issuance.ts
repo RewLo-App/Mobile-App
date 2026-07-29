@@ -8,7 +8,9 @@ import { requireMerchantMembership, type MerchantAuthenticatedRequest } from "..
 import { bulkIssuanceSchema, previewBatch } from "./merchant-issuance-model";
 
 const router = Router();
-router.use(requireAuth, requireRole("Merchant"), requireMerchantMembership);
+// Scoped to /merchant — an unscoped use() would run for every request passing
+// through this router and 403 all Fan traffic mounted after it.
+router.use("/merchant", requireAuth, requireRole("Merchant"), requireMerchantMembership);
 const id = (value: unknown) => Number.parseInt(typeof value === "string" ? value : "", 10);
 const status = z.enum(["draft", "active", "paused", "expired", "archived"]);
 const campaignStatus = z.enum(["draft", "scheduled", "active", "paused", "ended", "archived"]);
